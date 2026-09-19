@@ -95,9 +95,9 @@ def _createAndConnectModem():
     modem.smsTextMode = (_text_mode == 'yes')
     if _pin != 'None':
         logging.debug("Enter pin code : %s ", _pin)
-        modem.connect(_pin, 1)
+        modem.connect(_pin, 5)
     else:
-        modem.connect(None, 1)
+        modem.connect(None, 5)
     if _force_4g == 'yes' and modem.isSimComModem:
         try:
             modem.write('AT+CNMP=38')
