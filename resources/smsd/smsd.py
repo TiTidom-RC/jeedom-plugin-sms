@@ -22,7 +22,8 @@ import signal
 import traceback
 import json
 from typing import Optional
-from gsmmodem.modem import GsmModem
+from gsmmodem.exceptions import TimeoutException
+from gsmmodem.modem import GsmModem, StatusReport
 
 try:
     from jeedom.jeedom import jeedom_com, jeedom_socket, jeedom_utils, JEEDOM_SOCKET_MESSAGE
@@ -51,83 +52,124 @@ def handleSms(sms):
         j_com_instance.add_changes('devices::' + str(sms.number), {'number': sms.number, 'message': message})
 
 
+def handleStatusReport(report):
+    status = 'delivered' if report.deliveryStatus == StatusReport.DELIVERED else 'failed'
+    logging.info("Accusé de réception pour %s : %s (ref %s)", report.number, status, report.reference)
+    if j_com_instance:
+        j_com_instance.send_change_immediate({'number': 'delivery_report', 'destination': report.number, 'status': status, 'reference': report.reference})
+
+
+def _backoffDelay(attempt):
+    return min(_reconnect_base_delay * (2 ** (attempt - 1)), _reconnect_max_delay)
+
+
+def _isTransientNetworkError(e):
+    return isinstance(e, TimeoutException) or str(e) in ('Device not searching for network operator', 'Timeout')
+
+
+def _createAndConnectModem():
+    if _device is None:
+        raise ValueError('Device not found')
+    modem = GsmModem(
+        _device, int(_serial_rate),
+        smsReceivedCallbackFunc=handleSms,
+        smsStatusReportCallback=handleStatusReport,
+        requestDelivery=(_delivery_report == 'yes'),
+    )
+    logging.debug("Text mode %s", _text_mode == 'yes')
+    modem.smsTextMode = (_text_mode == 'yes')
+    if _pin != 'None':
+        logging.debug("Enter pin code : %s ", _pin)
+        modem.connect(_pin, 1)
+    else:
+        modem.connect(None, 1)
+    if _smsc != 'None':
+        logging.debug("Configure smsc : %s", _smsc)
+        modem.write(f'AT+CSCA="{_smsc}"')
+    logging.debug("Waiting for network...")
+    modem.waitForNetworkCoverage()
+    logging.debug("Ok")
+    try:
+        if j_com_instance:
+            j_com_instance.send_change_immediate({'number': 'network_name', 'message': str(modem.networkName)})
+    except Exception as e:
+        logging.error("Exception during send_change_immediate: %s", e)
+    for mem in ('ME', 'SM'):
+        try:
+            modem.write(f'AT+CPMS="{mem}","{mem}","{mem}"')
+            modem.write('AT+CMGD=1,4')
+        except Exception as e:
+            logging.error("Exception clearing '%s' storage: %s", mem, e)
+    return modem
+
+
+def _reconnectLoop():
+    global gsm
+    try:
+        if gsm:
+            gsm.close()
+    except Exception:
+        pass
+    attempt = 0
+    while attempt < _reconnect_max_attempts:
+        attempt += 1
+        delay = _backoffDelay(attempt)
+        logging.warning("Tentative de reconnexion modem %d/%d dans %.0fs", attempt, _reconnect_max_attempts, delay)
+        time.sleep(delay)
+        try:
+            gsm = _createAndConnectModem()
+            logging.info("Reconnexion modem réussie après %d tentative(s)", attempt)
+            return True
+        except Exception as e:
+            logging.error("Échec de la tentative de reconnexion %d/%d : %s", attempt, _reconnect_max_attempts, e)
+    logging.error("Nombre maximum de tentatives de reconnexion atteint (%d), abandon", _reconnect_max_attempts)
+    return False
+
+
 def listen():
     global gsm
     if j_socket_instance:
         j_socket_instance.open()
     logging.debug("Start listening...")
+    logging.debug("Connecting to GSM Modem...")
     try:
-        logging.debug("Connecting to GSM Modem...")
-        if _device is None:
-            raise ValueError('Device not found')
-        gsm = GsmModem(_device, int(_serial_rate), smsReceivedCallbackFunc=handleSms)
-        if _text_mode == 'yes':
-            logging.debug("Text mode true")
-            gsm.smsTextMode = True
-        else:
-            logging.debug("Text mode false")
-            gsm.smsTextMode = False
-        if _pin != 'None':
-            logging.debug("Enter pin code : %s ", _pin)
-            gsm.connect(_pin, 1)
-        else:
-            gsm.connect(None, 1)
-        if _smsc != 'None':
-            logging.debug("Configure smsc : %s", _smsc)
-            gsm.write(f'AT+CSCA="{_smsc}"')
-        logging.debug("Waiting for network...")
-        gsm.waitForNetworkCoverage()
-        logging.debug("Ok")
-        try:
-            if j_com_instance:
-                j_com_instance.send_change_immediate({'number': 'network_name', 'message': str(gsm.networkName)})
-        except Exception as e:
-            if str(e).find('object has no attribute') != -1:
-                pass
-            logging.error("Exception during send_change_immediate: %s" % str(e))
-
-        try:
-            gsm.write('AT+CPMS="ME","ME","ME"')
-            gsm.write('AT+CMGD=1,4')
-        except Exception as e:
-            if str(e).find('object has no attribute') != -1:
-                pass
-            logging.error("Exception on 'ME': %s", e)
-
-        try:
-            gsm.write('AT+CPMS="SM","SM","SM"')
-            gsm.write('AT+CMGD=1,4')
-        except Exception as e:
-            if str(e).find('object has no attribute') != -1:
-                pass
-            logging.error("Exception on 'SM': %s", e)
+        gsm = _createAndConnectModem()
     except Exception as e:
-        if str(e).find('object has no attribute') != -1:
-            pass
-        if str(e).find('Attempting to use a port that is not open') != -1:
-            pass
         logging.error("Global listen exception of type %s occurred: %s", type(e).__name__, e)
         if j_com_instance:
             j_com_instance.send_change_immediate({'number': 'none', 'message': str(e)})
-        logging.error("Exit 1 because this exception is fatal")
-        shutdown()
+        logging.error("Connexion initiale impossible, passage en boucle de reconnexion")
+        if not _reconnectLoop():
+            shutdown()
+            return
     signal_strength_store = 0
+    consecutive_network_failures = 0
+    sleep_duration = _cycle
     try:
         while 1:
-            time.sleep(_cycle)
+            time.sleep(sleep_duration)
+            sleep_duration = _cycle
             try:
                 if gsm:
                     gsm.waitForNetworkCoverage()
+                    consecutive_network_failures = 0
                     gsm.processStoredSms(True)
                     if signal_strength_store != gsm.signalStrength:
                         signal_strength_store = gsm.signalStrength
                     if j_com_instance:
                         j_com_instance.send_change_immediate({'number': 'signal_strength', 'message': str(gsm.signalStrength)})
             except Exception as e:
-                logging.error("Exception on GSM : %s", e)
-                if str(e) == 'Attempting to use a port that is not open' or str(e) == 'Timeout' or str(e) == 'Device not searching for network operator':
-                    logging.error("Exit 1 because this exception is fatal")
-                    shutdown()
+                if _isTransientNetworkError(e):
+                    consecutive_network_failures += 1
+                    sleep_duration = _backoffDelay(consecutive_network_failures)
+                    logging.warning("Perte de couverture réseau transitoire (%s), nouvelle vérification dans %.0fs (tentative %d)", e, sleep_duration, consecutive_network_failures)
+                else:
+                    logging.error("Exception on GSM : %s", e)
+                    logging.error("Connexion modem perdue, tentative de reconnexion...")
+                    if not _reconnectLoop():
+                        shutdown()
+                        return
+                    consecutive_network_failures = 0
             try:
                 read_socket()
             except Exception as e:
@@ -188,6 +230,10 @@ _serial_rate = 9600
 _pin = 'None'
 _text_mode = 'no'
 _smsc = 'None'
+_delivery_report = 'no'
+_reconnect_base_delay = 5.0
+_reconnect_max_delay = 300.0
+_reconnect_max_attempts = 10
 
 
 parser = argparse.ArgumentParser(description='SMS Daemon for Jeedom plugin')
@@ -201,6 +247,10 @@ parser.add_argument("--serialrate", help="Serial rate of device", type=str)
 parser.add_argument("--pin", help="Pin sim code", type=str)
 parser.add_argument("--textmode", help="Force text mode", type=str)
 parser.add_argument("--smsc", help="Smsc number", type=str)
+parser.add_argument("--deliveryreport", help="Request SMS delivery status report", type=str)
+parser.add_argument("--reconnectbasedelay", help="Base delay (s) before first reconnect attempt", type=str)
+parser.add_argument("--reconnectmaxdelay", help="Max delay (s) between reconnect attempts", type=str)
+parser.add_argument("--reconnectmaxattempts", help="Max number of reconnect attempts before giving up", type=str)
 parser.add_argument("--pid", help="Pid file", type=str)
 args = parser.parse_args()
 
@@ -224,6 +274,14 @@ if args.textmode:
     _text_mode = args.textmode
 if args.smsc:
     _smsc = args.smsc
+if args.deliveryreport:
+    _delivery_report = args.deliveryreport
+if args.reconnectbasedelay:
+    _reconnect_base_delay = float(args.reconnectbasedelay)
+if args.reconnectmaxdelay:
+    _reconnect_max_delay = float(args.reconnectmaxdelay)
+if args.reconnectmaxattempts:
+    _reconnect_max_attempts = int(args.reconnectmaxattempts)
 if args.pid:
     _pidfile = args.pid
 
@@ -244,6 +302,10 @@ logging.info('Serial rate : %s', _serial_rate)
 logging.info('Pin : %s', _pin)
 logging.info('Text mode : %s', _text_mode)
 logging.info('SMSC : %s', _smsc)
+logging.info('Delivery report : %s', _delivery_report)
+logging.info('Reconnect base delay : %s', _reconnect_base_delay)
+logging.info('Reconnect max delay : %s', _reconnect_max_delay)
+logging.info('Reconnect max attempts : %s', _reconnect_max_attempts)
 
 
 if _device == 'auto':

@@ -574,6 +574,15 @@ class GsmModem(SerialComms):
     def supportedCommands(self):
         """ :return: list of AT commands supported by this modem (without the AT prefix). Returns None if not known """
         try:
+            manufacturer = self.manufacturer.lower()
+        except Exception:
+            manufacturer = ''
+        if 'simcom' in manufacturer:
+            # SimCom modems (e.g. SIM7600) do not support AT+CLAC; attempting it wastes the
+            # full command timeout on every connect - skip straight to interactive detection
+            self.log.debug('SimCom modem detected - skipping AT+CLAC and using interactive command detection')
+            return self._detectCommandsInteractively()
+        try:
             # AT+CLAC responses differ between modems. Most respond with +CLAC: and then a comma-separated list of commands
             # while others simply return each command on a new line, with no +CLAC: prefix
             response = self.write('AT+CLAC', timeout=10)
@@ -588,32 +597,35 @@ class GsmModem(SerialComms):
                 self.log.debug(f'Unhandled +CLAC response: {response}')
                 return None
         except (TimeoutException, CommandError):
-            # Try interactive command recognition
-            commands = []
-            checkable_commands = ['^CVOICE', '+VTS', '^DTMF', '^USSDMODE', '+WIND', '+ZPAS', '+CSCS', '+CNUM']
+            return self._detectCommandsInteractively()
 
-            # Check if modem is still alive
+    def _detectCommandsInteractively(self):
+        """ Fallback command detection for modems that do not support AT+CLAC """
+        commands = []
+        checkable_commands = ['^CVOICE', '+VTS', '^DTMF', '^USSDMODE', '+WIND', '+ZPAS', '+CSCS', '+CNUM']
+
+        # Check if modem is still alive
+        try:
+            self.write('AT')
+        except Exception:
+            raise TimeoutException
+
+        # Check all commands that will by considered
+        for command in checkable_commands:
             try:
-                response = self.write('AT')
+                # Compose AT command that will read values under specified function
+                at_command = 'AT' + command + '=?'
+                self.write(at_command)
+                # If there are values inside response - add command to the list
+                commands.append(command)
             except Exception:
-                raise TimeoutException
+                continue
 
-            # Check all commands that will by considered
-            for command in checkable_commands:
-                try:
-                    # Compose AT command that will read values under specified function
-                    at_command = 'AT' + command + '=?'
-                    response = self.write(at_command)
-                    # If there are values inside response - add command to the list
-                    commands.append(command)
-                except Exception:
-                    continue
-
-            # Return found commands
-            if len(commands) == 0:
-                return None
-            else:
-                return commands
+        # Return found commands
+        if len(commands) == 0:
+            return None
+        else:
+            return commands
 
     @property
     def smsTextMode(self):
@@ -948,7 +960,7 @@ class GsmModem(SerialComms):
                 self.smsEncoding = 'GSM'
 
             # Encode text into PDUs
-            pdus = encodeSmsSubmitPdu(destination, text, reference=self._smsRef, sendFlash=sendFlash)
+            pdus = encodeSmsSubmitPdu(destination, text, reference=self._smsRef, requestStatusReport=self.requestDelivery, sendFlash=sendFlash)
 
             # Send SMS PDUs via AT commands
             for pdu in pdus:
@@ -1430,8 +1442,14 @@ class GsmModem(SerialComms):
         if cdsiMatch:
             msgMemory = cdsiMatch.group(1)
             msgIndex = cdsiMatch.group(2)
-            report = self.readStoredSms(msgIndex, msgMemory)
-            self.deleteStoredSms(msgIndex)
+            try:
+                report = self.readStoredSms(msgIndex, msgMemory)
+                self.deleteStoredSms(msgIndex)
+            except CommandError as e:
+                # Some modems (e.g. SimCom SIM7600) may clear the status report slot before it
+                # can be re-read; treat this as a lost report rather than crashing the notification thread
+                self.log.warning('Unable to read/delete SMS status report at %s:%s (modem quirk?): %s', msgMemory, msgIndex, e)
+                return
             # Update sent SMS status if possible
             if isinstance(report, StatusReport) and report.reference in self.sentSms:
                 self.sentSms[report.reference].report = report

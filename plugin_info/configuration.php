@@ -73,6 +73,12 @@ if (!isConnect('admin')) {
             </div>
         </div>
         <div class="form-group">
+            <label class="col-sm-5 control-label">{{Demander un accusé de réception}}</label>
+            <div class="col-sm-5">
+                <input type="checkbox" class="configKey" data-l1key="delivery_report" title='{{Le démon tentera de récupérer le statut de livraison (livré / échec) de chaque message envoyé}}' />
+            </div>
+        </div>
+        <div class="form-group">
             <label class="col-sm-5 control-label">{{Force du signal}}</label>
             <div class="col-sm-5">
                 <span class="configKey" data-l1key="signal_strengh"></span> / 30
@@ -94,6 +100,25 @@ if (!isConnect('admin')) {
             <label class="col-sm-5 control-label">{{Cycle (s)}}</label>
             <div class="col-sm-5">
                 <input class="configKey form-control" data-l1key="cycle" />
+            </div>
+        </div>
+        <legend>{{Reconnexion automatique en cas de perte du modem}}</legend>
+        <div class="form-group">
+            <label class="col-sm-5 control-label">{{Délai avant la première tentative (s)}}</label>
+            <div class="col-sm-5">
+                <input class="configKey form-control" data-l1key="reconnect_base_delay" title="{{Ce délai double à chaque nouvel échec, jusqu'au délai maximum ci-dessous}}" />
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-5 control-label">{{Délai maximum entre deux tentatives (s)}}</label>
+            <div class="col-sm-5">
+                <input class="configKey form-control" data-l1key="reconnect_max_delay" />
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-5 control-label">{{Nombre maximum de tentatives avant redémarrage complet du démon}}</label>
+            <div class="col-sm-5">
+                <input class="configKey form-control" data-l1key="reconnect_max_attempts" />
             </div>
         </div>
     </fieldset>

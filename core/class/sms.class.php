@@ -19,7 +19,7 @@
 /* * ***************************Includes********************************* */
 
 class sms extends eqLogic {
-	/*     * ***********************Methode static*************************** */
+	/*     * ***********************Méthode static*************************** */
 
 	public static $_encryptConfigKey = array('pin');
 
@@ -71,6 +71,11 @@ class sms extends eqLogic {
 		$cmd .= (config::byKey('text_mode', 'sms') == 1) ? 'yes' : 'no';
 		$cmd .= ' --smsc ' . config::byKey('smsc', 'sms', 'None');
 		$cmd .= ' --cycle ' . config::byKey('cycle', 'sms');
+		$cmd .= ' --deliveryreport ';
+		$cmd .= (config::byKey('delivery_report', 'sms', 0) == 1) ? 'yes' : 'no';
+		$cmd .= ' --reconnectbasedelay ' . config::byKey('reconnect_base_delay', 'sms', 5);
+		$cmd .= ' --reconnectmaxdelay ' . config::byKey('reconnect_max_delay', 'sms', 300);
+		$cmd .= ' --reconnectmaxattempts ' . config::byKey('reconnect_max_attempts', 'sms', 10);
 		$cmd .= ' --callback ' . network::getNetworkAccess('internal', 'http:127.0.0.1:port:comp') . '/plugins/sms/core/php/jeeSMS.php';
 		$cmd .= ' --apikey ' . jeedom::getApiKey('sms');
 		$cmd .= ' --pid ' . jeedom::getTmpFolder('sms') . '/deamon.pid';
@@ -108,7 +113,7 @@ class sms extends eqLogic {
 		sleep(1);
 	}
 
-	/*     * *********************Methode d'instance************************* */
+	/*     * *********************Méthode d'instance************************* */
 	public function preSave() {
 		if ($this->getConfiguration('allowUnknownOrigin', 0) == 0) {
 			$this->setConfiguration('autoAddNewNumber', 0);
@@ -165,14 +170,47 @@ class sms extends eqLogic {
 			$customNumber->save();
 		}
 	}
+
+	/**
+	 * Appelé par eqLogic.ajax.php APRES la suppression effective des commandes non soumises
+	 * (contrairement à postSave, qui s'exécute avant) : c'est donc ici, et pas dans postSave,
+	 * qu'il faut nettoyer les commandes compagnon devenues orphelines.
+	 *
+	 * @return void
+	 */
+	public function postAjax() {
+		$this->cleanOrphanDeliveryStatusCmd();
+	}
+
+	/**
+	 * Supprime les commandes compagnon "accusé de réception" (créées à la demande dans jeeSMS.php)
+	 * dont la commande d'action liée n'existe plus (contact supprimé)
+	 *
+	 * @return void
+	 */
+	private function cleanOrphanDeliveryStatusCmd() {
+		$actionCmdIds = array();
+		foreach ($this->getCmd('action') as $actionCmd) {
+			$actionCmdIds[] = $actionCmd->getId();
+		}
+		foreach ($this->getCmd() as $cmd) {
+			if (strpos($cmd->getLogicalId(), 'delivery_status_') !== 0) {
+				continue;
+			}
+			$parentCmdId = substr($cmd->getLogicalId(), strlen('delivery_status_'));
+			if (!in_array($parentCmdId, $actionCmdIds)) {
+				$cmd->remove();
+			}
+		}
+	}
 }
 
 class smsCmd extends cmd {
 	/*     * *************************Attributs****************************** */
 
-	/*     * ***********************Methode static*************************** */
+	/*     * ***********************Méthode static*************************** */
 
-	public static function cleanSMS($_message) {
+	public static function cleanSMS(string $_message) {
 		$caracteres = array(
 			'À' => 'a', 'Á' => 'a', 'Â' => 'a', 'Ä' => 'a', 'à' => 'a', 'á' => 'a', 'â' => 'a', 'ä' => 'a', '@' => 'a',
 			'È' => 'e', 'É' => 'e', 'Ê' => 'e', 'Ë' => 'e', 'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e', '€' => 'e',
@@ -185,7 +223,7 @@ class smsCmd extends cmd {
 		return preg_replace('#[^A-Za-z0-9 \n\.\'=\*:]+#', '', strtr($_message, $caracteres));
 	}
 
-	/*     * *********************Methode d'instance************************* */
+	/*     * *********************Méthode d'instance************************* */
 
 	public function dontRemoveCmd() {
 		if ($this->getLogicalId() == 'signal') {
@@ -218,7 +256,7 @@ class smsCmd extends cmd {
 			$message = trim($_options['title'] . ' ' . $_options['message']);
 		}
 		if (config::byKey('text_mode', 'sms') == 1) {
-			$message = self::cleanSMS(trim($message), true);
+			$message = self::cleanSMS(trim($message));
 		}
 		if (strlen($message) > config::byKey('maxChartByMessage', 'sms')) {
 			$messages = str_split($message, config::byKey('maxChartByMessage', 'sms'));

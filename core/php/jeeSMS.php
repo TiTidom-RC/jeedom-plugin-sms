@@ -46,6 +46,46 @@ if (isset($result['number']) && $result['number'] == 'network_name' && isset($re
 	die();
 }
 
+if (isset($result['number']) && $result['number'] == 'delivery_report' && isset($result['destination']) && isset($result['status'])) {
+	$destination = $result['destination'];
+	if (strlen($destination) == 11) {
+		$destination = '+' . $destination;
+	}
+	$formatedDestination = '0' . substr($destination, 3);
+	$label = ($result['status'] == 'delivered') ? __('Livré', __FILE__) : __('Échec', __FILE__);
+	$statusText = $label . ' : ' . $destination . ' (' . date('d/m/Y H:i:s') . ')';
+	$found = false;
+	foreach (eqLogic::byType('sms', true) as $eqLogic) {
+		/** @var cmd $cmd */
+		foreach ($eqLogic->getCmd('action') as $cmd) {
+			if ($cmd->getSubType() != 'message') {
+				continue;
+			}
+			if (strpos($cmd->getConfiguration('phonenumber'), $destination) === false && strpos($cmd->getConfiguration('phonenumber'), $formatedDestination) === false) {
+				continue;
+			}
+			$found = true;
+			$logicalId = 'delivery_status_' . $cmd->getId();
+			$deliveryStatus = $eqLogic->getCmd(null, $logicalId);
+			if (!is_object($deliveryStatus)) {
+				$deliveryStatus = new smsCmd();
+				$deliveryStatus->setEqLogic_id($eqLogic->getId());
+				$deliveryStatus->setLogicalId($logicalId);
+				$deliveryStatus->setIsVisible(0);
+				$deliveryStatus->setName(__('Accusé de réception', __FILE__) . ' - ' . $cmd->getName());
+				$deliveryStatus->setType('info');
+				$deliveryStatus->setSubType('string');
+				$deliveryStatus->save();
+			}
+			$deliveryStatus->event($statusText);
+		}
+	}
+	if (!$found) {
+		log::add('sms', 'info', __('Accusé de réception reçu pour un numéro non reconnu : ', __FILE__) . secureXSS($destination));
+	}
+	die();
+}
+
 if (isset($result['number']) && $result['number'] == 'none' && isset($result['message'])) {
 	message::add('sms', 'Error : ' . $result['message'], '', 'smscmderror');
 	if (strpos($result['message'], 'PIN') !== false) {
