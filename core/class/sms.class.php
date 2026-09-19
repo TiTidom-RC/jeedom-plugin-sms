@@ -215,7 +215,7 @@ class smsCmd extends cmd {
 		// send_to_custom_number n'a pas de destinataire fixe : la destination réelle est
 		// affichée dans la valeur de la commande (cf jeeSMS.php), pas dans son nom
 		$label = ($this->getLogicalId() == 'send_to_custom_number') ? 'Custom' : $this->getName();
-		$expectedName = __('Accusé de réception', __FILE__) . ' - ' . $label;
+		$expectedName = __('Statut', __FILE__) . ' - ' . $label;
 		$logicalId = 'delivery_status_' . $this->getId();
 		$deliveryStatus = $eqLogic->getCmd(null, $logicalId);
 		if (is_object($deliveryStatus)) {
