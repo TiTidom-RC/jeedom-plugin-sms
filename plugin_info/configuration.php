@@ -79,6 +79,12 @@ if (!isConnect('admin')) {
             </div>
         </div>
         <div class="form-group">
+            <label class="col-sm-5 control-label">{{Forcer le mode 4G uniquement}}</label>
+            <div class="col-sm-5">
+                <input type="checkbox" class="configKey" data-l1key="force_4g_only" title='{{Recommandé si votre opérateur a coupé la 2G/3G : évite au modem de perdre du temps à les rechercher. Attention, si la couverture 4G est absente à un endroit, le modem ne se repliera pas sur 2G/3G. Uniquement pris en compte sur les modems SimCom (ex : SIM7600G-H)}}' />
+            </div>
+        </div>
+        <div class="form-group">
             <label class="col-sm-5 control-label">{{Force du signal}}</label>
             <div class="col-sm-5">
                 <span class="configKey" data-l1key="signal_strengh"></span> / 30

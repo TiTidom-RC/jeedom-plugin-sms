@@ -67,12 +67,11 @@ class sms extends eqLogic {
 		$cmd .= ' --socketport ' . config::byKey('socketport', 'sms');
 		$cmd .= ' --serialrate ' . config::byKey('serial_rate', 'sms');
 		$cmd .= ' --pin ' . config::byKey('pin', 'sms', 'None');
-		$cmd .= ' --textmode ';
-		$cmd .= (config::byKey('text_mode', 'sms') == 1) ? 'yes' : 'no';
+		$cmd .= ' --textmode ' . ((config::byKey('text_mode', 'sms') == 1) ? 'yes' : 'no');
 		$cmd .= ' --smsc ' . config::byKey('smsc', 'sms', 'None');
+		$cmd .= ' --force4g ' . ((config::byKey('force_4g_only', 'sms') == 1) ? 'yes' : 'no');
 		$cmd .= ' --cycle ' . config::byKey('cycle', 'sms');
-		$cmd .= ' --deliveryreport ';
-		$cmd .= (config::byKey('delivery_report', 'sms', 0) == 1) ? 'yes' : 'no';
+		$cmd .= ' --deliveryreport ' . ((config::byKey('delivery_report', 'sms', 0) == 1) ? 'yes' : 'no');
 		$cmd .= ' --reconnectbasedelay ' . config::byKey('reconnect_base_delay', 'sms', 5);
 		$cmd .= ' --reconnectmaxdelay ' . config::byKey('reconnect_max_delay', 'sms', 300);
 		$cmd .= ' --reconnectmaxattempts ' . config::byKey('reconnect_max_attempts', 'sms', 10);

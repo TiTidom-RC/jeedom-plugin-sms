@@ -627,6 +627,11 @@ class GsmModem(SerialComms):
                 self._isSimComCache = False
         return self._isSimComCache
 
+    @property
+    def isSimComModem(self) -> bool:
+        """ :return: True if this modem identifies itself as a SimCom device (e.g. SIM7600) """
+        return self._isSimComModem()
+
     def _detectCommandsInteractively(self):
         """ Fallback command detection for modems that do not support AT+CLAC """
         commands = []

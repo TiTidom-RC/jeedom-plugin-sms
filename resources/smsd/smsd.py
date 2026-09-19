@@ -98,6 +98,9 @@ def _createAndConnectModem():
         modem.connect(_pin, 1)
     else:
         modem.connect(None, 1)
+    if _force_4g == 'yes' and modem.isSimComModem:
+        logging.debug("Forcing LTE-only network mode (AT+CNMP=38)")
+        modem.write('AT+CNMP=38')
     if _smsc != 'None':
         logging.debug("Configure smsc : %s", _smsc)
         modem.write(f'AT+CSCA="{_smsc}"')
@@ -258,6 +261,7 @@ _serial_rate = 9600
 _pin = 'None'
 _text_mode = 'no'
 _smsc = 'None'
+_force_4g = 'no'
 _delivery_report = 'no'
 _reconnect_base_delay = 5.0
 _reconnect_max_delay = 300.0
@@ -275,6 +279,7 @@ parser.add_argument("--serialrate", help="Serial rate of device", type=str)
 parser.add_argument("--pin", help="Pin sim code", type=str)
 parser.add_argument("--textmode", help="Force text mode", type=str)
 parser.add_argument("--smsc", help="Smsc number", type=str)
+parser.add_argument("--force4g", help="Force LTE-only network mode (SimCom modems only)", type=str)
 parser.add_argument("--deliveryreport", help="Request SMS delivery status report", type=str)
 parser.add_argument("--reconnectbasedelay", help="Base delay (s) before first reconnect attempt", type=str)
 parser.add_argument("--reconnectmaxdelay", help="Max delay (s) between reconnect attempts", type=str)
@@ -302,6 +307,8 @@ if args.textmode:
     _text_mode = args.textmode
 if args.smsc:
     _smsc = args.smsc
+if args.force4g:
+    _force_4g = args.force4g
 if args.deliveryreport:
     _delivery_report = args.deliveryreport
 if args.reconnectbasedelay:
