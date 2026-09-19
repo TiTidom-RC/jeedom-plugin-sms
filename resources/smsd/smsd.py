@@ -155,7 +155,7 @@ def listen():
         gsm = _createAndConnectModem()
         _setModemStatus('connected')
     except Exception as e:
-        logging.error("Global listen exception of type %s occurred: %s", type(e).__name__, e)
+        logging.error("Unexpected error while starting to listen (%s): %s", type(e).__name__, e)
         if j_com_instance:
             j_com_instance.send_change_immediate({'number': 'none', 'message': str(e)})
         logging.error("Initial connection failed, entering reconnection loop")
@@ -203,7 +203,7 @@ def listen():
 def read_socket():
     try:
         if not JEEDOM_SOCKET_MESSAGE.empty():
-            logging.debug("Message received in socket JEEDOM_SOCKET_MESSAGE")
+            logging.debug("Message received from Jeedom socket")
             message = json.loads(JEEDOM_SOCKET_MESSAGE.get().decode("utf-8"))
             if message['apikey'] != _apikey:
                 logging.error("Invalid apikey from socket : %s", message)
