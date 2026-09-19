@@ -1497,12 +1497,12 @@ class GsmModem(SerialComms):
         try:
             smsDict = decodeSmsPdu(notificationLine)
         except EncodingError:
-            self.log.debug('Discarding notification line from +CDS response: %s', notificationLine)
-        else:
-            if smsDict['type'] == 'SMS-STATUS-REPORT':
-                report = StatusReport(self, int(smsDict['status']), smsDict['reference'], smsDict['number'], smsDict['time'], smsDict['discharge'], smsDict['status'])
-            else:
-                raise CommandError(f"Invalid PDU type for readStoredSms(): {smsDict['type']}")
+            self.log.warning('Discarding undecodable notification line from +CDS response: %s', notificationLine)
+            return
+        if smsDict['type'] != 'SMS-STATUS-REPORT':
+            self.log.warning('Discarding notification line from +CDS response: invalid PDU type %s', smsDict['type'])
+            return
+        report = StatusReport(self, int(smsDict['status']), smsDict['reference'], smsDict['number'], smsDict['time'], smsDict['discharge'], smsDict['status'])
         # Update sent SMS status if possible
         if report.reference in self.sentSms:
             self.sentSms[report.reference].report = report
