@@ -46,6 +46,35 @@ if (isset($result['number']) && $result['number'] == 'network_name' && isset($re
 	die();
 }
 
+if (isset($result['number']) && $result['number'] == 'modem_status' && isset($result['status'])) {
+	switch ($result['status']) {
+		case 'connecting':
+			$message = __('Connexion en cours', __FILE__);
+			break;
+		case 'connected':
+			$message = __('Connecté', __FILE__);
+			break;
+		case 'searching':
+			$message = __('Recherche opérateur', __FILE__);
+			break;
+		case 'reconnecting':
+			$message = __('Reconnexion', __FILE__) . ' ' . $result['attempt'] . '/' . $result['max_attempts'];
+			break;
+		case 'disconnected':
+			$message = __('Déconnecté', __FILE__);
+			break;
+		default:
+			$message = $result['status'];
+	}
+	foreach (eqLogic::byType('sms') as $eqLogic) {
+		$cmd = $eqLogic->getCmd(null, 'connection');
+		if (is_object($cmd)) {
+			$cmd->event($message);
+		}
+	}
+	die();
+}
+
 if (isset($result['number']) && $result['number'] == 'delivery_report' && isset($result['destination']) && isset($result['status'])) {
 	$destination = $result['destination'];
 	if (strlen($destination) == 11) {

@@ -135,6 +135,20 @@ class sms extends eqLogic {
 		$signal->setSubType('numeric');
 		$signal->save();
 
+		$connection = $this->getCmd(null, 'connection');
+		if (!is_object($connection)) {
+			$connection = new smsCmd();
+			$connection->setEqLogic_id($this->getId());
+			$connection->setLogicalId('connection');
+			$connection->setIsVisible(0);
+			$connection->setName(__('Connexion', __FILE__));
+			$connection->setTemplate('dashboard', 'core::line');
+			$connection->setTemplate('mobile', 'core::line');
+		}
+		$connection->setType('info');
+		$connection->setSubType('string');
+		$connection->save();
+
 		$sms = $this->getCmd(null, 'sms');
 		if (!is_object($sms)) {
 			$sms = new smsCmd();
@@ -203,7 +217,7 @@ class smsCmd extends cmd {
 	/*     * *********************Méthode d'instance************************* */
 
 	public function dontRemoveCmd() {
-		if ($this->getLogicalId() == 'signal') {
+		if ($this->getLogicalId() == 'signal' || $this->getLogicalId() == 'connection') {
 			return true;
 		}
 		if (strpos($this->getLogicalId(), 'delivery_status_') === 0 || strpos($this->getLogicalId(), 'delivery_success_') === 0) {

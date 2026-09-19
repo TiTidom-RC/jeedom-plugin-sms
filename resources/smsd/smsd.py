@@ -67,6 +67,21 @@ def _isTransientNetworkError(e):
     return isinstance(e, TimeoutException) or str(e) in ('Device not searching for network operator', 'Timeout')
 
 
+_modem_status = None
+
+
+def _setModemStatus(status, **kwargs):
+    """Push the modem connection status to Jeedom (deduplicated, PHP does the display translation)"""
+    global _modem_status
+    if status == _modem_status:
+        return
+    _modem_status = status
+    if j_com_instance:
+        change = {'number': 'modem_status', 'status': status}
+        change.update(kwargs)
+        j_com_instance.send_change_immediate(change)
+
+
 def _createAndConnectModem():
     if _device is None:
         raise ValueError('Device not found')
@@ -114,15 +129,18 @@ def _reconnectLoop():
     while attempt < _reconnect_max_attempts:
         attempt += 1
         delay = _backoffDelay(attempt)
+        _setModemStatus('reconnecting', attempt=attempt, max_attempts=_reconnect_max_attempts)
         logging.warning("Tentative de reconnexion modem %d/%d dans %.0fs", attempt, _reconnect_max_attempts, delay)
         time.sleep(delay)
         try:
             gsm = _createAndConnectModem()
             logging.info("Reconnexion modem réussie après %d tentative(s)", attempt)
+            _setModemStatus('connected')
             return True
         except Exception as e:
             logging.error("Échec de la tentative de reconnexion %d/%d : %s", attempt, _reconnect_max_attempts, e)
     logging.error("Nombre maximum de tentatives de reconnexion atteint (%d), abandon", _reconnect_max_attempts)
+    _setModemStatus('disconnected')
     return False
 
 
@@ -132,8 +150,10 @@ def listen():
         j_socket_instance.open()
     logging.debug("Start listening...")
     logging.debug("Connecting to GSM Modem...")
+    _setModemStatus('connecting')
     try:
         gsm = _createAndConnectModem()
+        _setModemStatus('connected')
     except Exception as e:
         logging.error("Global listen exception of type %s occurred: %s", type(e).__name__, e)
         if j_com_instance:
@@ -162,6 +182,7 @@ def listen():
                 if _isTransientNetworkError(e):
                     consecutive_network_failures += 1
                     sleep_duration = _backoffDelay(consecutive_network_failures)
+                    _setModemStatus('searching')
                     logging.warning("Perte de couverture réseau transitoire (%s), nouvelle vérification dans %.0fs (tentative %d)", e, sleep_duration, consecutive_network_failures)
                 else:
                     logging.error("Exception on GSM : %s", e)

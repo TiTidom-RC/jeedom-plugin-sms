@@ -36,6 +36,12 @@ function sms_update() {
 			}
 		}
 	}
+	// Crée la commande "Connexion" manquante sur les contacts créés avant l'ajout de cette fonctionnalité
+	foreach (eqLogic::byType('sms') as $eqLogic) {
+		if (!is_object($eqLogic->getCmd(null, 'connection'))) {
+			$eqLogic->save();
+		}
+	}
 	$paths = array(
 		'resources/smsd/gsmmodem/compat.py',
 	);
