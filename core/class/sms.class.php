@@ -254,6 +254,8 @@ class smsCmd extends cmd {
 			$deliverySuccess->setName(__('Remis', __FILE__) . ' - ' . $label);
 			$deliverySuccess->setTemplate('dashboard', 'core::icon');
 			$deliverySuccess->setTemplate('mobile', 'core::icon');
+			// Sans ça, un envoi qui repasse à la même valeur (souvent 1) ne génère pas d'événement
+			$deliverySuccess->setConfiguration('repeatEventManagement', 'always');
 			$deliverySuccess->save();
 		}
 	}
