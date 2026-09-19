@@ -1,7 +1,6 @@
 """ Low-level serial communications handling """
 
 import threading
-import time
 import logging
 from typing import Optional, List, Union, Callable, Literal, overload
 
@@ -56,10 +55,7 @@ class SerialComms:
         """ Connects to the device and starts the read thread """
         self.serial = serial.Serial(dsrdtr=True, rtscts=False, port=self.port, baudrate=self.baudrate,
                                     timeout=self.timeout, *self.com_args, **self.com_kwargs)
-        # A previous connection attempt may have just abandoned a command (e.g. on timeout) - the modem
-        # doesn't know that, and can still be transmitting that command's reply for a short while after
-        # we reopen the port. Give it a moment to finish trickling in, then discard it.
-        time.sleep(1)
+        # Discard any stray bytes already sitting in the buffer (e.g. leftovers from a previous session)
         self.serial.reset_input_buffer()
         # Start read thread
         self.alive = True
