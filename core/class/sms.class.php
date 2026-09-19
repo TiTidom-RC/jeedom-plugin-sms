@@ -196,14 +196,15 @@ class smsCmd extends cmd {
 		if ($this->getLogicalId() == 'signal') {
 			return true;
 		}
-		if (strpos($this->getLogicalId(), 'delivery_status_') === 0) {
+		if (strpos($this->getLogicalId(), 'delivery_status_') === 0 || strpos($this->getLogicalId(), 'delivery_success_') === 0) {
 			return true;
 		}
 		return false;
 	}
 
 	/**
-	 * Crée/met à jour la commande info compagnon "accusé de réception" de cette commande d'action de type message.
+	 * Crée les commandes compagnon de cette commande d'action de type message, si elles n'existent
+	 * pas déjà : "Statut" (texte, pour affichage) et "Remis" (binaire 1/0, pour condition de scénario).
 	 *
 	 * @return void
 	 */
@@ -213,25 +214,32 @@ class smsCmd extends cmd {
 		}
 		$eqLogic = $this->getEqLogic();
 		// send_to_custom_number n'a pas de destinataire fixe : la destination réelle est
-		// affichée dans la valeur de la commande (cf jeeSMS.php), pas dans son nom
+		// affichée dans la valeur des commandes (cf jeeSMS.php), pas dans leur nom
 		$label = ($this->getLogicalId() == 'send_to_custom_number') ? 'Custom' : $this->getName();
-		$expectedName = __('Statut', __FILE__) . ' - ' . $label;
-		$logicalId = 'delivery_status_' . $this->getId();
-		$deliveryStatus = $eqLogic->getCmd(null, $logicalId);
-		if (is_object($deliveryStatus)) {
-			if ($deliveryStatus->getName() == $expectedName) {
-				return;
-			}
-		} else {
-			$deliveryStatus = new smsCmd();
-			$deliveryStatus->setEqLogic_id($this->getEqLogic_id());
-			$deliveryStatus->setLogicalId($logicalId);
-			$deliveryStatus->setIsVisible(0);
-			$deliveryStatus->setType('info');
-			$deliveryStatus->setSubType('string');
+		$this->syncDeliveryCompanionCmd($eqLogic, 'delivery_status_', __('Statut', __FILE__) . ' - ' . $label, 'string');
+		$this->syncDeliveryCompanionCmd($eqLogic, 'delivery_success_', __('Remis', __FILE__) . ' - ' . $label, 'binary');
+	}
+
+	/**
+	 * Crée une commande info compagnon (identifiée par $_logicalIdPrefix . $this->getId()) si elle
+	 * n'existe pas encore. Ne touche jamais au nom d'une commande existante : l'utilisateur reste
+	 * libre de le personnaliser, seul le logicalId identifie la commande de façon stable.
+	 *
+	 * @return void
+	 */
+	private function syncDeliveryCompanionCmd($_eqLogic, $_logicalIdPrefix, $_expectedName, $_subType) {
+		$logicalId = $_logicalIdPrefix . $this->getId();
+		if (is_object($_eqLogic->getCmd(null, $logicalId))) {
+			return;
 		}
-		$deliveryStatus->setName($expectedName);
-		$deliveryStatus->save();
+		$companion = new smsCmd();
+		$companion->setEqLogic_id($this->getEqLogic_id());
+		$companion->setLogicalId($logicalId);
+		$companion->setIsVisible(0);
+		$companion->setType('info');
+		$companion->setSubType($_subType);
+		$companion->setName($_expectedName);
+		$companion->save();
 	}
 
 	/**
@@ -246,9 +254,11 @@ class smsCmd extends cmd {
 			return;
 		}
 		$eqLogic = $this->getEqLogic();
-		$deliveryStatus = $eqLogic->getCmd(null, 'delivery_status_' . $this->getId());
-		if (is_object($deliveryStatus)) {
-			$deliveryStatus->remove();
+		foreach (array('delivery_status_', 'delivery_success_') as $prefix) {
+			$companion = $eqLogic->getCmd(null, $prefix . $this->getId());
+			if (is_object($companion)) {
+				$companion->remove();
+			}
 		}
 	}
 

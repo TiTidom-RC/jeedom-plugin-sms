@@ -54,6 +54,7 @@ if (isset($result['number']) && $result['number'] == 'delivery_report' && isset(
 	$formatedDestination = '0' . substr($destination, 3);
 	$label = ($result['status'] == 'delivered') ? __('Livré', __FILE__) : __('Échec', __FILE__);
 	$statusText = $label . ' : ' . $destination . ' (' . date('d/m/Y H:i:s') . ')';
+	$success = ($result['status'] == 'delivered') ? 1 : 0;
 	$found = false;
 	foreach (eqLogic::byType('sms', true) as $eqLogic) {
 		/** @var cmd $cmd */
@@ -66,6 +67,7 @@ if (isset($result['number']) && $result['number'] == 'delivery_report' && isset(
 			}
 			$found = true;
 			$eqLogic->checkAndUpdateCmd('delivery_status_' . $cmd->getId(), $statusText);
+			$eqLogic->checkAndUpdateCmd('delivery_success_' . $cmd->getId(), $success);
 		}
 	}
 	if (!$found) {
@@ -75,6 +77,7 @@ if (isset($result['number']) && $result['number'] == 'delivery_report' && isset(
 			$customNumberCmd = $eqLogic->getCmd(null, 'send_to_custom_number');
 			if (is_object($customNumberCmd)) {
 				$eqLogic->checkAndUpdateCmd('delivery_status_' . $customNumberCmd->getId(), $statusText);
+				$eqLogic->checkAndUpdateCmd('delivery_success_' . $customNumberCmd->getId(), $success);
 				$found = true;
 				break;
 			}
