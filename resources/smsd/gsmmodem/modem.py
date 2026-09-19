@@ -1286,23 +1286,24 @@ class GsmModem(SerialComms):
         :param lines The lines that were read
         """
         next_line_is_te_statusreport = False
+        handled = False
         for line in lines:
             if 'RING' in line:
-                # Incoming call (or existing call is ringing)
+                # Incoming call (or existing call is ringing) - consumes the remainder of "lines"
                 self._handleIncomingCall(lines)
                 return
             elif line.startswith('+CMTI'):
-                # New SMS message indication
+                # New SMS message indication - self-contained; other notifications may follow in this same batch
                 self._handleSmsReceived(line)
-                return
+                handled = True
             elif line.startswith('+CUSD'):
-                # USSD notification - either a response or a MT-USSD ("push USSD") message
+                # USSD notification - either a response or a MT-USSD ("push USSD") message - consumes the remainder of "lines"
                 self._handleUssd(lines)
                 return
             elif line.startswith('+CDSI'):
-                # SMS status report
+                # SMS status report - self-contained; other notifications may follow in this same batch
                 self._handleSmsStatusReport(line)
-                return
+                handled = True
             elif line.startswith('+CDS'):
                 # SMS status report at next line
                 next_line_is_te_statusreport = True
@@ -1313,21 +1314,22 @@ class GsmModem(SerialComms):
                     next_line_is_te_statusreport_length = -1
             elif next_line_is_te_statusreport:
                 self._handleSmsStatusReportTe(next_line_is_te_statusreport_length, line)
-                return
+                next_line_is_te_statusreport = False
+                handled = True
             elif line.startswith('+DTMF'):
-                # New incoming DTMF
+                # New incoming DTMF - self-contained; other notifications may follow in this same batch
                 self._handleIncomingDTMF(line)
-                return
+                handled = True
             else:
                 # Check for call status updates
                 for updateRegex, handlerFunc in self._callStatusUpdates:
                     match = updateRegex.match(line)
                     if match:
-                        # Handle the update
+                        # Handle the update - consumes the remainder of "lines"
                         handlerFunc(match)
                         return
-        # If this is reached, the notification wasn't handled
-        self.log.debug('Unhandled unsolicited modem notification: %s', lines)
+        if not handled:
+            self.log.debug('Unhandled unsolicited modem notification: %s', lines)
 
     # Simcom modem able detect incoming DTMF
     def _handleIncomingDTMF(self, line):
