@@ -39,7 +39,7 @@ class jeedom_com():
         self.changes = {}
         if cycle > 0:
             self.send_changes_async()
-        logging.debug('Init request module v%s' % (str(requests.__version__),))
+        logging.debug('Init request module v%s' % (str(requests.__version__),))  # type: ignore
 
     def send_changes_async(self):
         try:
