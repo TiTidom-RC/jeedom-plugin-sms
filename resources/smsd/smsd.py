@@ -42,7 +42,7 @@ gsm: Optional[GsmModem] = None
 
 
 def handleSms(sms):
-    logging.debug("Got SMS message : %s", sms)
+    logging.info("Got SMS message : %s", sms)
     if not sms.text:
         logging.debug("No text so nothing to do")
         return
@@ -54,7 +54,7 @@ def handleSms(sms):
 
 def handleStatusReport(report):
     status = 'delivered' if report.deliveryStatus == StatusReport.DELIVERED else 'failed'
-    logging.info("Accusé de réception pour %s : %s (ref %s)", report.number, status, report.reference)
+    logging.info("Delivery report for %s : %s (ref %s)", report.number, status, report.reference)
     if j_com_instance:
         j_com_instance.send_change_immediate({'number': 'delivery_report', 'destination': report.number, 'status': status, 'reference': report.reference})
 
@@ -130,16 +130,16 @@ def _reconnectLoop():
         attempt += 1
         delay = _backoffDelay(attempt)
         _setModemStatus('reconnecting', attempt=attempt, max_attempts=_reconnect_max_attempts)
-        logging.warning("Tentative de reconnexion modem %d/%d dans %.0fs", attempt, _reconnect_max_attempts, delay)
+        logging.warning("Attempting modem reconnection %d/%d in %.0fs", attempt, _reconnect_max_attempts, delay)
         time.sleep(delay)
         try:
             gsm = _createAndConnectModem()
-            logging.info("Reconnexion modem réussie après %d tentative(s)", attempt)
+            logging.info("Modem reconnection successful after %d attempt(s)", attempt)
             _setModemStatus('connected')
             return True
         except Exception as e:
-            logging.error("Échec de la tentative de reconnexion %d/%d : %s", attempt, _reconnect_max_attempts, e)
-    logging.error("Nombre maximum de tentatives de reconnexion atteint (%d), abandon", _reconnect_max_attempts)
+            logging.error("Reconnection attempt %d/%d failed : %s", attempt, _reconnect_max_attempts, e)
+    logging.error("Maximum number of reconnection attempts reached (%d), giving up", _reconnect_max_attempts)
     _setModemStatus('disconnected')
     return False
 
@@ -158,7 +158,7 @@ def listen():
         logging.error("Global listen exception of type %s occurred: %s", type(e).__name__, e)
         if j_com_instance:
             j_com_instance.send_change_immediate({'number': 'none', 'message': str(e)})
-        logging.error("Connexion initiale impossible, passage en boucle de reconnexion")
+        logging.error("Initial connection failed, entering reconnection loop")
         if not _reconnectLoop():
             shutdown()
             return
@@ -184,10 +184,10 @@ def listen():
                     consecutive_network_failures += 1
                     sleep_duration = _backoffDelay(consecutive_network_failures)
                     _setModemStatus('searching')
-                    logging.warning("Perte de couverture réseau transitoire (%s), nouvelle vérification dans %.0fs (tentative %d)", e, sleep_duration, consecutive_network_failures)
+                    logging.warning("Temporary network loss (%s), rechecking in %.0fs (attempt %d)", e, sleep_duration, consecutive_network_failures)
                 else:
                     logging.error("Exception on GSM : %s", e)
-                    logging.error("Connexion modem perdue, tentative de reconnexion...")
+                    logging.error("Modem connection lost, attempting reconnection...")
                     if not _reconnectLoop():
                         shutdown()
                         return
@@ -206,14 +206,14 @@ def read_socket():
             logging.debug("Message received in socket JEEDOM_SOCKET_MESSAGE")
             message = json.loads(JEEDOM_SOCKET_MESSAGE.get().decode("utf-8"))
             if message['apikey'] != _apikey:
-                logging.error("Invalid apikey from socket : ", message)
+                logging.error("Invalid apikey from socket : %s", message)
                 return
             if gsm:
                 gsm.waitForNetworkCoverage()
-                logging.info("Envoi d'un message à %s: %s", message['number'], message['message'])
+                logging.info("Sending message to %s: %s", message['number'], message['message'])
                 gsm.sendSms(message['number'], message['message'])
     except Exception as e:
-        logging.error(str(e))
+        logging.error("Exception in read_socket : %s", e)
 
 
 def handler(signum=None, frame=None):
@@ -357,7 +357,7 @@ try:
     jeedom_utils.write_pid(str(_pidfile))
     j_com_instance = jeedom_com(apikey=_apikey, url=_callback, cycle=_cycle)
     if not j_com_instance.test():
-        logging.error('Network communication issues. Please fixe your Jeedom network configuration.')
+        logging.error('Network communication issues. Please fix your Jeedom network configuration.')
         shutdown()
     j_socket_instance = jeedom_socket(port=_socket_port, address=_socket_host)
     listen()
