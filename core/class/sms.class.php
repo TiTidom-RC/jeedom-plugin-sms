@@ -172,26 +172,44 @@ class sms extends eqLogic {
 	}
 
 	/**
-	 * Appelé par eqLogic.ajax.php APRES la suppression effective des commandes non soumises
+	 * Appelé par eqLogic.ajax.php APRES la synchronisation des commandes soumises
 	 * (contrairement à postSave, qui s'exécute avant) : c'est donc ici, et pas dans postSave,
-	 * qu'il faut nettoyer les commandes compagnon devenues orphelines.
+	 * qu'il faut créer/mettre à jour les commandes compagnon "accusé de réception" par contact
+	 * et nettoyer celles devenues orphelines.
 	 *
 	 * @return void
 	 */
 	public function postAjax() {
-		$this->cleanOrphanDeliveryStatusCmd();
+		$this->syncDeliveryStatusCmd();
 	}
 
 	/**
-	 * Supprime les commandes compagnon "accusé de réception" (créées à la demande dans jeeSMS.php)
-	 * dont la commande d'action liée n'existe plus (contact supprimé)
+	 * Crée/met à jour une commande info compagnon "accusé de réception" par commande d'action
+	 * de type message (une par contact), et supprime les compagnons orphelins (contact supprimé).
+	 * jeeSMS.php se contente ensuite de mettre à jour la valeur de ces commandes à la réception
+	 * d'un accusé de réception réel.
 	 *
 	 * @return void
 	 */
-	private function cleanOrphanDeliveryStatusCmd() {
+	private function syncDeliveryStatusCmd() {
 		$actionCmdIds = array();
 		foreach ($this->getCmd('action') as $actionCmd) {
+			if ($actionCmd->getSubType() != 'message') {
+				continue;
+			}
 			$actionCmdIds[] = $actionCmd->getId();
+			$logicalId = 'delivery_status_' . $actionCmd->getId();
+			$deliveryStatus = $this->getCmd(null, $logicalId);
+			if (!is_object($deliveryStatus)) {
+				$deliveryStatus = new smsCmd();
+				$deliveryStatus->setEqLogic_id($this->getId());
+				$deliveryStatus->setLogicalId($logicalId);
+				$deliveryStatus->setIsVisible(0);
+			}
+			$deliveryStatus->setName(__('Accusé de réception', __FILE__) . ' - ' . $actionCmd->getName());
+			$deliveryStatus->setType('info');
+			$deliveryStatus->setSubType('string');
+			$deliveryStatus->save();
 		}
 		foreach ($this->getCmd() as $cmd) {
 			if (strpos($cmd->getLogicalId(), 'delivery_status_') !== 0) {
