@@ -111,6 +111,20 @@ class jeedom_com():
                 logging.error('Error on send request to jeedom ' + str(error) + ' retry : ' + str(i) + '/' + str(self.retry))
             i = i + 1
 
+    def send_change_sync(self, change, timeout=2):
+        """Envoi synchrone, sans retry et avec un timeout court : pour un chemin critique comme
+        l'arrêt du démon, où thread_change() (retry x timeout jusqu'à 120s) bloquerait trop longtemps"""
+        logging.debug('Send to jeedom (sync) :  %s' % (str(change),))
+        try:
+            r = requests.post(self.url + '?apikey=' + self.apikey, json=change, timeout=timeout, verify=False)
+            if r.status_code != requests.codes.ok:
+                logging.error('Error on sync send request to jeedom, return code %s' % (str(r.status_code),))
+                return False
+        except Exception as error:
+            logging.error('Error on sync send request to jeedom ' + str(error))
+            return False
+        return True
+
     def set_change(self, changes):
         self.changes = changes
 

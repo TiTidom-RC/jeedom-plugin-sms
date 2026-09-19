@@ -223,6 +223,10 @@ def handler(signum=None, frame=None):
 
 def shutdown():
     logging.debug("Shutdown")
+    # Envoi synchrone borné (pas thread_change/send_change_immediate) : os._exit() plus bas tuerait
+    # un thread avant l'envoi, et thread_change() pourrait bloquer l'arrêt jusqu'à 6min (retry x 120s)
+    if j_com_instance:
+        j_com_instance.send_change_sync({'number': 'modem_status', 'status': 'disconnected'})
     logging.debug("Removing PID file %s", _pidfile)
     try:
         os.remove(_pidfile)
