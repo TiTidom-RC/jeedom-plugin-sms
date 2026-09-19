@@ -62,6 +62,8 @@ function addCmdToTable(_cmd) {
 
   $('#table_cmd tbody').append(tr);
   var tr = $('#table_cmd tbody tr:last');
+  tr.setValues(_cmd, '.cmdAttr');
+  jeedom.cmd.changeType(tr, init(_cmd.subType));
   jeedom.user.all({
     error: function (error) {
       $('#div_alert').showAlert({ message: error.message, level: 'danger' });
@@ -72,7 +74,7 @@ function addCmdToTable(_cmd) {
         option += '<option value="' + data[i].id + '">' + data[i].login + '</option>';
       }
       tr.find('.cmdAttr[data-l1key=configuration][data-l2key=user]').empty().append(option);
-      tr.setValues(_cmd, '.cmdAttr');
+      tr.find('.cmdAttr[data-l1key=configuration][data-l2key=user]').val(init(_cmd.configuration.user));
       modifyWithoutSave = false;
     }
   });
