@@ -86,8 +86,8 @@ if (!isConnect('admin')) {
         </div>
         <div class="form-group">
             <label class="col-sm-5 control-label">{{Force du signal}}</label>
-            <div class="col-sm-5">
-                <span class="configKey" data-l1key="signal_strengh"></span> / 30
+            <div class="col-sm-5" title='{{-1 = signal inconnu (pas de lecture disponible actuellement)}}'>
+                <span class="configKey" data-l1key="signal_strength"></span> / 30
             </div>
         </div>
         <div class="form-group">

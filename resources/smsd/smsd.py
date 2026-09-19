@@ -108,7 +108,7 @@ def _createAndConnectModem():
         logging.debug("Configure smsc : %s", _smsc)
         modem.write(f'AT+CSCA="{_smsc}"')
     logging.debug("Waiting for network...")
-    modem.waitForNetworkCoverage()
+    modem.waitForNetworkCoverage(timeout=_cycle)
     logging.debug("Network coverage acquired")
     if modem.isSimComModem:
         try:
@@ -139,6 +139,9 @@ def _reconnectLoop():
             gsm.close()
     except Exception:
         pass
+    # No modem instance to query while reconnecting - signalStrength convention (gsmmodem): -1 = unknown
+    if j_com_instance:
+        j_com_instance.send_change_immediate({'number': 'signal_strength', 'message': '-1'})
     attempt = 0
     while attempt < _reconnect_max_attempts:
         attempt += 1
@@ -172,44 +175,36 @@ def listen():
         logging.error("Unexpected error while starting to listen (%s): %s", type(e).__name__, e)
         if j_com_instance:
             j_com_instance.send_change_immediate({'number': 'none', 'message': str(e)})
-            j_com_instance.send_change_immediate({'number': 'signal_strength', 'message': '0'})
         logging.error("Initial connection failed, entering reconnection loop")
         if not _reconnectLoop():
             shutdown()
             return
-    signal_strength_store = 0
     consecutive_network_failures = 0
-    sleep_duration = _cycle
     try:
         while 1:
-            time.sleep(sleep_duration)
             sleep_duration = _cycle
+            if gsm and j_com_instance:
+                try:
+                    ss = gsm.signalStrength
+                except Exception as e:
+                    logging.debug("Failed to read signal strength : %s", e)
+                    ss = -1
+                j_com_instance.send_change_immediate({'number': 'signal_strength', 'message': str(ss)})
             try:
                 if gsm:
-                    gsm.waitForNetworkCoverage()
+                    gsm.waitForNetworkCoverage(timeout=_cycle)
                     consecutive_network_failures = 0
                     _setModemStatus('connected')
                     gsm.processStoredSms(True)
-                    if signal_strength_store != gsm.signalStrength:
-                        signal_strength_store = gsm.signalStrength
-                    if j_com_instance:
-                        j_com_instance.send_change_immediate({'number': 'signal_strength', 'message': str(gsm.signalStrength)})
             except Exception as e:
                 if _isTransientNetworkError(e):
                     consecutive_network_failures += 1
                     sleep_duration = _backoffDelay(consecutive_network_failures)
                     _setModemStatus('searching')
-                    # Otherwise the "Signal" value stays frozen on its last reading while coverage is actually lost
-                    signal_strength_store = 0
-                    if j_com_instance:
-                        j_com_instance.send_change_immediate({'number': 'signal_strength', 'message': '0'})
                     logging.warning("Temporary network loss (%s), rechecking in %.0fs (attempt %d)", e, sleep_duration, consecutive_network_failures)
                 else:
                     logging.error("Exception on GSM : %s", e)
                     logging.error("Modem connection lost, attempting reconnection...")
-                    signal_strength_store = 0
-                    if j_com_instance:
-                        j_com_instance.send_change_immediate({'number': 'signal_strength', 'message': '0'})
                     if not _reconnectLoop():
                         shutdown()
                         return
@@ -218,6 +213,7 @@ def listen():
                 read_socket()
             except Exception as e:
                 logging.error("Exception on socket : %s", e)
+            time.sleep(sleep_duration)
     except KeyboardInterrupt:
         shutdown()
 
@@ -230,9 +226,9 @@ def read_socket():
             logging.error("Invalid apikey from socket : %s", message)
             return
         if gsm:
-            gsm.waitForNetworkCoverage()
-            logging.info("Sending message to %s: %s", message['number'], message['message'])
             try:
+                gsm.waitForNetworkCoverage(timeout=_cycle)
+                logging.info("Sending message to %s: %s", message['number'], message['message'])
                 gsm.sendSms(message['number'], message['message'])
             except Exception as e:
                 logging.error("Failed to send SMS to %s : %s", message['number'], e)
@@ -251,7 +247,7 @@ def shutdown():
     # un thread avant l'envoi, et thread_change() pourrait bloquer l'arrêt jusqu'à 6min (retry x 120s)
     if j_com_instance:
         j_com_instance.send_change_sync({'number': 'modem_status', 'status': 'disconnected'})
-        j_com_instance.send_change_sync({'number': 'signal_strength', 'message': '0'})
+        j_com_instance.send_change_sync({'number': 'signal_strength', 'message': '-1'})
     logging.debug("Removing PID file %s", _pidfile)
     try:
         os.remove(_pidfile)
