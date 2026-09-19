@@ -396,13 +396,30 @@ class GsmModem(SerialComms):
             del cpmsLine
 
         if self._smsReadSupported and (self.smsReceivedCallback or self.smsStatusReportCallback):
-            # SimCom modems (e.g. SIM7600) may fail to expose delivery reports stored via <ds>=2
-            # ("CMS 321" when reading them back) - <ds>=1 delivers them directly via +CDS instead,
-            # bypassing the faulty memory read entirely. Other modems keep the default <ds>=2.
-            cnmi = self.AT_CNMI or ('2,1,0,1' if self._isSimComModem() else '2,1,0,2')
-            try:
-                self.write('AT+CNMI=' + cnmi)  # Set message notifications
-            except CommandError:
+            # <ds>=1 (direct delivery reports via +CDS, avoids the SR-memory read bug some SimCom
+            # modems exhibit) can be individually listed as supported by AT+CNMI=? yet still be
+            # rejected for a specific <mode>,<mt>,<bm> combination - so try a few plausible
+            # combinations before falling back to <ds>=2 (known to work on every modem tested so far).
+            # <mt> is always kept at 1 (+CMTI store-and-notify): it's the only incoming-SMS
+            # notification format this code parses (see CMTI_REGEX) - other <mt> values would
+            # silently break incoming SMS reception if accepted by the modem.
+            if self.AT_CNMI:
+                cnmiCandidates = [self.AT_CNMI]
+            elif self._isSimComModem():
+                cnmiCandidates = ['1,1,0,1', '0,1,0,1', '2,1,2,1', '2,1,0,2']
+            else:
+                cnmiCandidates = ['2,1,0,2']
+
+            cnmiSet = False
+            for cnmi in cnmiCandidates:
+                try:
+                    self.write('AT+CNMI=' + cnmi)  # Set message notifications
+                    self.log.info('Message notifications set with AT+CNMI=%s', cnmi)
+                    cnmiSet = True
+                    break
+                except CommandError:
+                    continue
+            if not cnmiSet:
                 try:
                     self.write('AT+CNMI=2,1,0,1,0')  # Set message notifications, using TE for delivery reports <ds>
                 except CommandError:
