@@ -152,7 +152,8 @@ class GsmModem(SerialComms):
         self.smsReceivedCallback = smsReceivedCallbackFunc or self._placeholderCallback
         self.smsStatusReportCallback = smsStatusReportCallback or self._placeholderCallback
         self.requestDelivery = requestDelivery
-        self.AT_CNMI = AT_CNMI or "2,1,0,2"
+        self.AT_CNMI = AT_CNMI  # empty means "pick a modem-type-appropriate default" - resolved in connect()
+        self._isSimComCache: Optional[bool] = None  # cached result of _isSimComModem()
         # Flag indicating whether caller ID for incoming call notification has been set up
         self._callingLineIdentification = False
         # Flag indicating whether incoming call notifications have extended information
@@ -280,7 +281,7 @@ class GsmModem(SerialComms):
 
         # Attempt to identify modem type directly (if not already) - for outgoing call status updates
         if callUpdateTableHint == 0:
-            if 'simcom' in self.manufacturer.lower():  # simcom modems support DTMF and don't support AT+CLAC
+            if self._isSimComModem():  # simcom modems support DTMF and don't support AT+CLAC
                 Call.dtmfSupport = True
                 try:
                     self.write('AT+DDET=1')                # enable detect incoming DTMF
@@ -395,8 +396,12 @@ class GsmModem(SerialComms):
             del cpmsLine
 
         if self._smsReadSupported and (self.smsReceivedCallback or self.smsStatusReportCallback):
+            # SimCom modems (e.g. SIM7600) may fail to expose delivery reports stored via <ds>=2
+            # ("CMS 321" when reading them back) - <ds>=1 delivers them directly via +CDS instead,
+            # bypassing the faulty memory read entirely. Other modems keep the default <ds>=2.
+            cnmi = self.AT_CNMI or ('2,1,0,1' if self._isSimComModem() else '2,1,0,2')
             try:
-                self.write('AT+CNMI=' + self.AT_CNMI)  # Set message notifications
+                self.write('AT+CNMI=' + cnmi)  # Set message notifications
             except CommandError:
                 try:
                     self.write('AT+CNMI=2,1,0,1,0')  # Set message notifications, using TE for delivery reports <ds>
@@ -573,11 +578,7 @@ class GsmModem(SerialComms):
     @property
     def supportedCommands(self):
         """ :return: list of AT commands supported by this modem (without the AT prefix). Returns None if not known """
-        try:
-            manufacturer = self.manufacturer.lower()
-        except Exception:
-            manufacturer = ''
-        if 'simcom' in manufacturer:
+        if self._isSimComModem():
             # SimCom modems (e.g. SIM7600) do not support AT+CLAC; attempting it wastes the
             # full command timeout on every connect - skip straight to interactive detection
             self.log.debug('SimCom modem detected - skipping AT+CLAC and using interactive command detection')
@@ -598,6 +599,16 @@ class GsmModem(SerialComms):
                 return None
         except (TimeoutException, CommandError):
             return self._detectCommandsInteractively()
+
+    def _isSimComModem(self) -> bool:
+        """ :return: True if this modem identifies itself as a SimCom device (e.g. SIM7600).
+        Cached after the first call since the manufacturer never changes for a given connection. """
+        if self._isSimComCache is None:
+            try:
+                self._isSimComCache = 'simcom' in self.manufacturer.lower()
+            except Exception:
+                self._isSimComCache = False
+        return self._isSimComCache
 
     def _detectCommandsInteractively(self):
         """ Fallback command detection for modems that do not support AT+CLAC """
