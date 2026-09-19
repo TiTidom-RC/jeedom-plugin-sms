@@ -170,57 +170,6 @@ class sms extends eqLogic {
 			$customNumber->save();
 		}
 	}
-
-	/**
-	 * Appelé par eqLogic.ajax.php APRES la synchronisation des commandes soumises
-	 * (contrairement à postSave, qui s'exécute avant) : c'est donc ici, et pas dans postSave,
-	 * qu'il faut créer/mettre à jour les commandes compagnon "accusé de réception" par contact
-	 * et nettoyer celles devenues orphelines.
-	 *
-	 * @return void
-	 */
-	public function postAjax() {
-		$this->syncDeliveryStatusCmd();
-	}
-
-	/**
-	 * Crée/met à jour une commande info compagnon "accusé de réception" par commande d'action
-	 * de type message (une par contact), et supprime les compagnons orphelins (contact supprimé).
-	 * jeeSMS.php se contente ensuite de mettre à jour la valeur de ces commandes à la réception
-	 * d'un accusé de réception réel.
-	 *
-	 * @return void
-	 */
-	private function syncDeliveryStatusCmd() {
-		$actionCmdIds = array();
-		foreach ($this->getCmd('action') as $actionCmd) {
-			if ($actionCmd->getSubType() != 'message') {
-				continue;
-			}
-			$actionCmdIds[] = $actionCmd->getId();
-			$logicalId = 'delivery_status_' . $actionCmd->getId();
-			$deliveryStatus = $this->getCmd(null, $logicalId);
-			if (!is_object($deliveryStatus)) {
-				$deliveryStatus = new smsCmd();
-				$deliveryStatus->setEqLogic_id($this->getId());
-				$deliveryStatus->setLogicalId($logicalId);
-				$deliveryStatus->setIsVisible(0);
-			}
-			$deliveryStatus->setName(__('Accusé de réception', __FILE__) . ' - ' . $actionCmd->getName());
-			$deliveryStatus->setType('info');
-			$deliveryStatus->setSubType('string');
-			$deliveryStatus->save();
-		}
-		foreach ($this->getCmd() as $cmd) {
-			if (strpos($cmd->getLogicalId(), 'delivery_status_') !== 0) {
-				continue;
-			}
-			$parentCmdId = substr($cmd->getLogicalId(), strlen('delivery_status_'));
-			if (!in_array($parentCmdId, $actionCmdIds)) {
-				$cmd->remove();
-			}
-		}
-	}
 }
 
 class smsCmd extends cmd {
@@ -247,7 +196,60 @@ class smsCmd extends cmd {
 		if ($this->getLogicalId() == 'signal') {
 			return true;
 		}
+		if (strpos($this->getLogicalId(), 'delivery_status_') === 0) {
+			return true;
+		}
 		return false;
+	}
+
+	/**
+	 * Crée/met à jour la commande info compagnon "accusé de réception" de cette commande d'action de type message.
+	 *
+	 * @return void
+	 */
+	public function postSave() {
+		if ($this->getType() != 'action' || $this->getSubType() != 'message') {
+			return;
+		}
+		$eqLogic = $this->getEqLogic();
+		// send_to_custom_number n'a pas de destinataire fixe : la destination réelle est
+		// affichée dans la valeur de la commande (cf jeeSMS.php), pas dans son nom
+		$label = ($this->getLogicalId() == 'send_to_custom_number') ? 'Custom' : $this->getName();
+		$expectedName = __('Accusé de réception', __FILE__) . ' - ' . $label;
+		$logicalId = 'delivery_status_' . $this->getId();
+		$deliveryStatus = $eqLogic->getCmd(null, $logicalId);
+		if (is_object($deliveryStatus)) {
+			if ($deliveryStatus->getName() == $expectedName) {
+				return;
+			}
+		} else {
+			$deliveryStatus = new smsCmd();
+			$deliveryStatus->setEqLogic_id($this->getEqLogic_id());
+			$deliveryStatus->setLogicalId($logicalId);
+			$deliveryStatus->setIsVisible(0);
+			$deliveryStatus->setType('info');
+			$deliveryStatus->setSubType('string');
+		}
+		$deliveryStatus->setName($expectedName);
+		$deliveryStatus->save();
+	}
+
+	/**
+	 * Supprime la commande compagnon "accusé de réception" lorsque cette commande d'action
+	 * de type message est supprimée. Utilise preRemove() (et non postRemove()) car DB::remove()
+	 * réinitialise l'id de l'objet à null avant d'appeler postRemove().
+	 *
+	 * @return void
+	 */
+	public function preRemove() {
+		if ($this->getType() != 'action' || $this->getSubType() != 'message') {
+			return;
+		}
+		$eqLogic = $this->getEqLogic();
+		$deliveryStatus = $eqLogic->getCmd(null, 'delivery_status_' . $this->getId());
+		if (is_object($deliveryStatus)) {
+			$deliveryStatus->remove();
+		}
 	}
 
 	public function preSave() {

@@ -58,26 +58,26 @@ if (isset($result['number']) && $result['number'] == 'delivery_report' && isset(
 	foreach (eqLogic::byType('sms', true) as $eqLogic) {
 		/** @var cmd $cmd */
 		foreach ($eqLogic->getCmd('action') as $cmd) {
-			if ($cmd->getSubType() != 'message') {
+			if ($cmd->getSubType() != 'message' || $cmd->getLogicalId() == 'send_to_custom_number') {
 				continue;
 			}
 			if (strpos($cmd->getConfiguration('phonenumber'), $destination) === false && strpos($cmd->getConfiguration('phonenumber'), $formatedDestination) === false) {
 				continue;
 			}
 			$found = true;
-			$logicalId = 'delivery_status_' . $cmd->getId();
-			$deliveryStatus = $eqLogic->getCmd(null, $logicalId);
-			if (!is_object($deliveryStatus)) {
-				$deliveryStatus = new smsCmd();
-				$deliveryStatus->setEqLogic_id($eqLogic->getId());
-				$deliveryStatus->setLogicalId($logicalId);
-				$deliveryStatus->setIsVisible(0);
-				$deliveryStatus->setName(__('Accusé de réception', __FILE__) . ' - ' . $cmd->getName());
-				$deliveryStatus->setType('info');
-				$deliveryStatus->setSubType('string');
-				$deliveryStatus->save();
+			$eqLogic->checkAndUpdateCmd('delivery_status_' . $cmd->getId(), $statusText);
+		}
+	}
+	if (!$found) {
+		// Numéro ne correspondant à aucun contact connu : le message a forcément été envoyé
+		// via la commande "Envoyer message à" (numéro personnalisé), on y route l'accusé
+		foreach (eqLogic::byType('sms', true) as $eqLogic) {
+			$customNumberCmd = $eqLogic->getCmd(null, 'send_to_custom_number');
+			if (is_object($customNumberCmd)) {
+				$eqLogic->checkAndUpdateCmd('delivery_status_' . $customNumberCmd->getId(), $statusText);
+				$found = true;
+				break;
 			}
-			$deliveryStatus->event($statusText);
 		}
 	}
 	if (!$found) {
@@ -195,3 +195,4 @@ function handleMessage($cmd, $number, $message) {
 	$eqLogic->checkAndUpdateCmd('sms', $message);
 	$eqLogic->checkAndUpdateCmd('sender', $cmd->getName());
 }
+

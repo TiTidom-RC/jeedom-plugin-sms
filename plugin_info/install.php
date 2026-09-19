@@ -28,6 +28,14 @@ function sms_update() {
 	if (config::byKey('api::sms::mode') == '') {
 		config::save('api::sms::mode', 'localhost');
 	}
+	// Crée la commande "accusé de réception" manquante sur les contacts créés avant l'ajout de cette fonctionnalité
+	foreach (eqLogic::byType('sms') as $eqLogic) {
+		foreach ($eqLogic->getCmd('action') as $cmd) {
+			if ($cmd->getSubType() == 'message' && !is_object($eqLogic->getCmd(null, 'delivery_status_' . $cmd->getId()))) {
+				$cmd->save();
+			}
+		}
+	}
 	$paths = array(
 		'resources/smsd/gsmmodem/compat.py',
 	);
