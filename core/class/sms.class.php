@@ -158,8 +158,8 @@ class sms extends eqLogic {
 			$sms->setLogicalId('sms');
 			$sms->setIsVisible(0);
 			$sms->setName(__('Message', __FILE__));
-			$sms->setTemplate('dashboard', 'core::multiline');
-			$sms->setTemplate('mobile', 'core::multiline');
+			$sms->setTemplate('dashboard', 'core::line');
+			$sms->setTemplate('mobile', 'core::line');
 			$sms->setDisplay('forceReturnLineBefore', 1);
 			$sms->setDisplay('forceReturnLineAfter', 1);
 		}
