@@ -144,6 +144,8 @@ class sms extends eqLogic {
 			$connection->setName(__('Connexion', __FILE__));
 			$connection->setTemplate('dashboard', 'core::line');
 			$connection->setTemplate('mobile', 'core::line');
+			$connection->setDisplay('forceReturnLineBefore', 1);
+			$connection->setDisplay('forceReturnLineAfter', 1);
 		}
 		$connection->setType('info');
 		$connection->setSubType('string');
