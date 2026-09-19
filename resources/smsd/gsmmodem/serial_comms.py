@@ -20,6 +20,9 @@ class SerialComms:
     RX_EOL_SEQ = b'\r\n'
     # End-of-response terminator
     RESPONSE_TERM = re.compile(r'^OK|ERROR|(\+CM[ES] ERROR: \d+)|(COMMAND NOT SUPPORT)$')
+    # Prefixes of unsolicited notifications that can pre-empt a pending command response (e.g. a delivery
+    # report or incoming SMS arriving while another AT command is awaiting its own response)
+    URC_PREFIXES = ('+CDSI', '+CMTI')
     # Default timeout for serial port reads (in seconds)
     timeout = 1
 
@@ -37,6 +40,8 @@ class SerialComms:
         self._expectResponseTermSeq = None  # expected response terminator sequence
         self._response = None  # Buffer containing response to a written command
         self._notification = []  # Buffer containing lines from an unsolicited notification from the modem
+        # Set when a bare "+CDS:" header line was just seen; the PDU data line following it belongs to that same URC
+        self._expectUrcContinuation = False
         # Reentrant lock for managing concurrent write access to the underlying serial port
         self._txLock = threading.RLock()
 
@@ -62,9 +67,26 @@ class SerialComms:
         self.rxThread.join()
         self.serial.close()
 
+    def _isUrcLine(self, line):
+        """ Determine whether `line` is (part of) an unsolicited notification that must be routed to
+        notifyCallback() even if a command response is currently pending (e.g. a delivery report or an
+        incoming SMS indication arriving while another AT command, such as a SMS send, is in progress) """
+        if self._expectUrcContinuation:
+            # This is the PDU data line following a bare "+CDS:" header line
+            self._expectUrcContinuation = False
+            return True
+        if line.startswith(self.URC_PREFIXES):
+            return True
+        if line.startswith('+CDS:'):
+            # Two-line URC (mode ds=1): the PDU data follows on the next line
+            self._expectUrcContinuation = True
+            return True
+        return False
+
     def _handleLineRead(self, line, checkForResponseTerm=True):
         # print 'sc.hlineread:',line
-        if self._responseEvent and not self._responseEvent.is_set():
+        isUrc = self._isUrcLine(line)
+        if self._responseEvent and not self._responseEvent.is_set() and not isUrc:
             # A response event has been set up (another thread is waiting for this response)
             if self._response is not None:
                 self._response.append(line)
@@ -74,7 +96,7 @@ class SerialComms:
                 self.log.debug('response: %s', self._response)
                 self._responseEvent.set()
         else:
-            # Nothing was waiting for this - treat it as a notification
+            # Nothing was waiting for this (or it's a URC pre-empting a pending response) - treat it as a notification
             self._notification.append(line)
             if self.serial.in_waiting == 0:
                 # No more chars on the way for this notification - notify higher-level callback
