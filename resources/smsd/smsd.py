@@ -173,6 +173,7 @@ def listen():
                 if gsm:
                     gsm.waitForNetworkCoverage()
                     consecutive_network_failures = 0
+                    _setModemStatus('connected')
                     gsm.processStoredSms(True)
                     if signal_strength_store != gsm.signalStrength:
                         signal_strength_store = gsm.signalStrength
