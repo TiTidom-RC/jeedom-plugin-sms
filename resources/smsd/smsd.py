@@ -172,6 +172,7 @@ def listen():
         logging.error("Unexpected error while starting to listen (%s): %s", type(e).__name__, e)
         if j_com_instance:
             j_com_instance.send_change_immediate({'number': 'none', 'message': str(e)})
+            j_com_instance.send_change_immediate({'number': 'signal_strength', 'message': '0'})
         logging.error("Initial connection failed, entering reconnection loop")
         if not _reconnectLoop():
             shutdown()
@@ -198,10 +199,17 @@ def listen():
                     consecutive_network_failures += 1
                     sleep_duration = _backoffDelay(consecutive_network_failures)
                     _setModemStatus('searching')
+                    # Otherwise the "Signal" value stays frozen on its last reading while coverage is actually lost
+                    signal_strength_store = 0
+                    if j_com_instance:
+                        j_com_instance.send_change_immediate({'number': 'signal_strength', 'message': '0'})
                     logging.warning("Temporary network loss (%s), rechecking in %.0fs (attempt %d)", e, sleep_duration, consecutive_network_failures)
                 else:
                     logging.error("Exception on GSM : %s", e)
                     logging.error("Modem connection lost, attempting reconnection...")
+                    signal_strength_store = 0
+                    if j_com_instance:
+                        j_com_instance.send_change_immediate({'number': 'signal_strength', 'message': '0'})
                     if not _reconnectLoop():
                         shutdown()
                         return
@@ -243,6 +251,7 @@ def shutdown():
     # un thread avant l'envoi, et thread_change() pourrait bloquer l'arrêt jusqu'à 6min (retry x 120s)
     if j_com_instance:
         j_com_instance.send_change_sync({'number': 'modem_status', 'status': 'disconnected'})
+        j_com_instance.send_change_sync({'number': 'signal_strength', 'message': '0'})
     logging.debug("Removing PID file %s", _pidfile)
     try:
         os.remove(_pidfile)
