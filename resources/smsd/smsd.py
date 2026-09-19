@@ -201,19 +201,16 @@ def listen():
 
 
 def read_socket():
-    try:
-        if not JEEDOM_SOCKET_MESSAGE.empty():
-            logging.debug("Message received from Jeedom socket")
-            message = json.loads(JEEDOM_SOCKET_MESSAGE.get().decode("utf-8"))
-            if message['apikey'] != _apikey:
-                logging.error("Invalid apikey from socket : %s", message)
-                return
-            if gsm:
-                gsm.waitForNetworkCoverage()
-                logging.info("Sending message to %s: %s", message['number'], message['message'])
-                gsm.sendSms(message['number'], message['message'])
-    except Exception as e:
-        logging.error("Exception in read_socket : %s", e)
+    if not JEEDOM_SOCKET_MESSAGE.empty():
+        logging.debug("Message received from Jeedom socket")
+        message = json.loads(JEEDOM_SOCKET_MESSAGE.get().decode("utf-8"))
+        if message['apikey'] != _apikey:
+            logging.error("Invalid apikey from socket : %s", message)
+            return
+        if gsm:
+            gsm.waitForNetworkCoverage()
+            logging.info("Sending message to %s: %s", message['number'], message['message'])
+            gsm.sendSms(message['number'], message['message'])
 
 
 def handler(signum=None, frame=None):
