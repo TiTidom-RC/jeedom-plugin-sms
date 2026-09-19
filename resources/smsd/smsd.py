@@ -91,45 +91,54 @@ def _createAndConnectModem():
         smsStatusReportCallback=handleStatusReport,
         requestDelivery=(_delivery_report == 'yes'),
     )
-    logging.debug("Text mode %s", _text_mode == 'yes')
-    modem.smsTextMode = (_text_mode == 'yes')
-    if _pin != 'None':
-        logging.debug("Enter pin code : %s ", _pin)
-        modem.connect(_pin, 5)
-    else:
-        modem.connect(None, 5)
-    if _force_4g == 'yes' and modem.isSimComModem:
-        try:
-            modem.write('AT+CNMP=38')
-            logging.debug("Forced LTE-only network mode (AT+CNMP=38)")
-        except Exception as e:
-            logging.error("Failed to force LTE-only network mode (AT+CNMP=38) : %s", e)
-    if _smsc != 'None':
-        logging.debug("Configure smsc : %s", _smsc)
-        modem.write(f'AT+CSCA="{_smsc}"')
-    logging.debug("Waiting for network...")
-    modem.waitForNetworkCoverage(timeout=_cycle)
-    logging.debug("Network coverage acquired")
-    if modem.isSimComModem:
-        try:
-            # First field of the response is the actual RAT in use (LTE/WCDMA/GSM/NO SERVICE...) -
-            # useful to spot a fallback to 2G/3G when force_4g is set, or just to see the current mode otherwise
-            cpsi = modem.write('AT+CPSI?')
-            logging.info("Network system info (AT+CPSI?) : %s", cpsi)
-        except Exception as e:
-            logging.error("Failed to query network system info (AT+CPSI?) : %s", e)
     try:
-        if j_com_instance:
-            j_com_instance.send_change_immediate({'number': 'network_name', 'message': str(modem.networkName)})
-    except Exception as e:
-        logging.error("Exception during send_change_immediate: %s", e)
-    for mem in ('ME', 'SM'):
+        logging.debug("Text mode %s", _text_mode == 'yes')
+        modem.smsTextMode = (_text_mode == 'yes')
+        if _pin != 'None':
+            logging.debug("Enter pin code : %s ", _pin)
+            modem.connect(_pin, 5)
+        else:
+            modem.connect(None, 5)
+        if _force_4g == 'yes' and modem.isSimComModem:
+            try:
+                modem.write('AT+CNMP=38')
+                logging.debug("Forced LTE-only network mode (AT+CNMP=38)")
+            except Exception as e:
+                logging.error("Failed to force LTE-only network mode (AT+CNMP=38) : %s", e)
+        if _smsc != 'None':
+            logging.debug("Configure smsc : %s", _smsc)
+            modem.write(f'AT+CSCA="{_smsc}"')
+        logging.debug("Waiting for network...")
+        modem.waitForNetworkCoverage(timeout=_cycle)
+        logging.debug("Network coverage acquired")
+        if modem.isSimComModem:
+            try:
+                # First field of the response is the actual RAT in use (LTE/WCDMA/GSM/NO SERVICE...) -
+                # useful to spot a fallback to 2G/3G when force_4g is set, or just to see the current mode otherwise
+                cpsi = modem.write('AT+CPSI?')
+                logging.info("Network system info (AT+CPSI?) : %s", cpsi)
+            except Exception as e:
+                logging.error("Failed to query network system info (AT+CPSI?) : %s", e)
         try:
-            modem.write(f'AT+CPMS="{mem}","{mem}","{mem}"')
-            modem.write('AT+CMGD=1,4')
+            if j_com_instance:
+                j_com_instance.send_change_immediate({'number': 'network_name', 'message': str(modem.networkName)})
         except Exception as e:
-            logging.error("Exception clearing '%s' storage: %s", mem, e)
-    return modem
+            logging.error("Exception during send_change_immediate: %s", e)
+        for mem in ('ME', 'SM'):
+            try:
+                modem.write(f'AT+CPMS="{mem}","{mem}","{mem}"')
+                modem.write('AT+CMGD=1,4')
+            except Exception as e:
+                logging.error("Exception clearing '%s' storage: %s", mem, e)
+        return modem
+    except Exception:
+        # Otherwise a failed attempt leaves its read thread and serial port open, contending with the
+        # next attempt's connection over the same device and corrupting its I/O (garbled/duplicated bytes)
+        try:
+            modem.close()
+        except Exception:
+            pass
+        raise
 
 
 def _reconnectLoop():
