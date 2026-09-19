@@ -128,6 +128,8 @@ class sms extends eqLogic {
 			$signal->setLogicalId('signal');
 			$signal->setIsVisible(0);
 			$signal->setName(__('Signal', __FILE__));
+			$signal->setTemplate('dashboard', 'core::tile');
+			$signal->setTemplate('mobile', 'core::tile');
 		}
 		$signal->setType('info');
 		$signal->setSubType('numeric');
@@ -140,6 +142,10 @@ class sms extends eqLogic {
 			$sms->setLogicalId('sms');
 			$sms->setIsVisible(0);
 			$sms->setName(__('Message', __FILE__));
+			$sms->setTemplate('dashboard', 'core::multiline');
+			$sms->setTemplate('mobile', 'core::multiline');
+			$sms->setDisplay('forceReturnLineBefore', 1);
+			$sms->setDisplay('forceReturnLineAfter', 1);
 		}
 		$sms->setType('info');
 		$sms->setSubType('string');
@@ -151,7 +157,11 @@ class sms extends eqLogic {
 			$sender->setEqLogic_id($this->getId());
 			$sender->setLogicalId('sender');
 			$sender->setIsVisible(0);
-			$sender->setName(__('Expediteur', __FILE__));
+			$sender->setName(__('Expéditeur', __FILE__));
+			$sender->setTemplate('dashboard', 'core::line');
+			$sender->setTemplate('mobile', 'core::line');
+			$sender->setDisplay('forceReturnLineBefore', 1);
+			$sender->setDisplay('forceReturnLineAfter', 1);
 		}
 		$sender->setType('info');
 		$sender->setSubType('string');
@@ -216,30 +226,36 @@ class smsCmd extends cmd {
 		// send_to_custom_number n'a pas de destinataire fixe : la destination réelle est
 		// affichée dans la valeur des commandes (cf jeeSMS.php), pas dans leur nom
 		$label = ($this->getLogicalId() == 'send_to_custom_number') ? 'Custom' : $this->getName();
-		$this->syncDeliveryCompanionCmd($eqLogic, 'delivery_status_', __('Statut', __FILE__) . ' - ' . $label, 'string');
-		$this->syncDeliveryCompanionCmd($eqLogic, 'delivery_success_', __('Remis', __FILE__) . ' - ' . $label, 'binary');
-	}
 
-	/**
-	 * Crée une commande info compagnon (identifiée par $_logicalIdPrefix . $this->getId()) si elle
-	 * n'existe pas encore. Ne touche jamais au nom d'une commande existante : l'utilisateur reste
-	 * libre de le personnaliser, seul le logicalId identifie la commande de façon stable.
-	 *
-	 * @return void
-	 */
-	private function syncDeliveryCompanionCmd($_eqLogic, $_logicalIdPrefix, $_expectedName, $_subType) {
-		$logicalId = $_logicalIdPrefix . $this->getId();
-		if (is_object($_eqLogic->getCmd(null, $logicalId))) {
-			return;
+		$statusLogicalId = 'delivery_status_' . $this->getId();
+		if (!is_object($eqLogic->getCmd(null, $statusLogicalId))) {
+			$deliveryStatus = new smsCmd();
+			$deliveryStatus->setEqLogic_id($this->getEqLogic_id());
+			$deliveryStatus->setLogicalId($statusLogicalId);
+			$deliveryStatus->setIsVisible(0);
+			$deliveryStatus->setType('info');
+			$deliveryStatus->setSubType('string');
+			$deliveryStatus->setName(__('Statut', __FILE__) . ' - ' . $label);
+			$deliveryStatus->setTemplate('dashboard', 'core::line');
+			$deliveryStatus->setTemplate('mobile', 'core::line');
+			$deliveryStatus->setDisplay('forceReturnLineBefore', 1);
+			$deliveryStatus->setDisplay('forceReturnLineAfter', 1);
+			$deliveryStatus->save();
 		}
-		$companion = new smsCmd();
-		$companion->setEqLogic_id($this->getEqLogic_id());
-		$companion->setLogicalId($logicalId);
-		$companion->setIsVisible(0);
-		$companion->setType('info');
-		$companion->setSubType($_subType);
-		$companion->setName($_expectedName);
-		$companion->save();
+
+		$successLogicalId = 'delivery_success_' . $this->getId();
+		if (!is_object($eqLogic->getCmd(null, $successLogicalId))) {
+			$deliverySuccess = new smsCmd();
+			$deliverySuccess->setEqLogic_id($this->getEqLogic_id());
+			$deliverySuccess->setLogicalId($successLogicalId);
+			$deliverySuccess->setIsVisible(0);
+			$deliverySuccess->setType('info');
+			$deliverySuccess->setSubType('binary');
+			$deliverySuccess->setName(__('Remis', __FILE__) . ' - ' . $label);
+			$deliverySuccess->setTemplate('dashboard', 'core::icon');
+			$deliverySuccess->setTemplate('mobile', 'core::icon');
+			$deliverySuccess->save();
+		}
 	}
 
 	/**
