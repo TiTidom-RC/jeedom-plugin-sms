@@ -10,7 +10,7 @@ class TimeoutException(GsmModemException):
 
     def __init__(self, data=None):
         """ @param data: Any data that was read was read before timeout occurred (if applicable) """
-        super(TimeoutException, self).__init__(data)
+        super(TimeoutException, self).__init__(data if data else 'Timeout waiting for modem response')
         self.data = data
 
 
