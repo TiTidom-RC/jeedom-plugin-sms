@@ -99,14 +99,25 @@ def _createAndConnectModem():
     else:
         modem.connect(None, 1)
     if _force_4g == 'yes' and modem.isSimComModem:
-        logging.debug("Forcing LTE-only network mode (AT+CNMP=38)")
-        modem.write('AT+CNMP=38')
+        try:
+            modem.write('AT+CNMP=38')
+            logging.debug("Forced LTE-only network mode (AT+CNMP=38)")
+        except Exception as e:
+            logging.warning("Failed to force LTE-only network mode (AT+CNMP=38) : %s", e)
     if _smsc != 'None':
         logging.debug("Configure smsc : %s", _smsc)
         modem.write(f'AT+CSCA="{_smsc}"')
     logging.debug("Waiting for network...")
     modem.waitForNetworkCoverage()
     logging.debug("Ok")
+    if modem.isSimComModem:
+        try:
+            # First field of the response is the actual RAT in use (LTE/WCDMA/GSM/NO SERVICE...) -
+            # useful to spot a fallback to 2G/3G when force_4g is set, or just to see the current mode otherwise
+            cpsi = modem.write('AT+CPSI?')
+            logging.info("Network system info (AT+CPSI?) : %s", cpsi)
+        except Exception as e:
+            logging.warning("Failed to query network system info (AT+CPSI?) : %s", e)
     try:
         if j_com_instance:
             j_com_instance.send_change_immediate({'number': 'network_name', 'message': str(modem.networkName)})
