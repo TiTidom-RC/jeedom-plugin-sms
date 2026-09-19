@@ -917,6 +917,8 @@ def encodeUcs2(text):
     """ UCS2 text encoding algorithm
 
     Encodes the specified text string into UCS2-encoded bytes.
+    Characters outside the Basic Multilingual Plane (e.g. many modern emoji, U+10000+)
+    cannot be represented in UCS2 and are replaced with '?'.
 
     :param text: the text string to encode
 
@@ -925,7 +927,10 @@ def encodeUcs2(text):
     """
     result = bytearray()
 
-    for b in map(ord, text):
+    for char in text:
+        b = ord(char)
+        if b > 0xFFFF:
+            b = ord('?')
         result.append(b >> 8)
         result.append(b & 0xFF)
     return result

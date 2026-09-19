@@ -210,7 +210,12 @@ def read_socket():
         if gsm:
             gsm.waitForNetworkCoverage()
             logging.info("Sending message to %s: %s", message['number'], message['message'])
-            gsm.sendSms(message['number'], message['message'])
+            try:
+                gsm.sendSms(message['number'], message['message'])
+            except Exception as e:
+                logging.error("Failed to send SMS to %s : %s", message['number'], e)
+                if j_com_instance:
+                    j_com_instance.send_change_immediate({'number': 'delivery_report', 'destination': message['number'], 'status': 'failed'})
 
 
 def handler(signum=None, frame=None):
