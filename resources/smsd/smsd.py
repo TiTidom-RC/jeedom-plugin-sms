@@ -104,7 +104,7 @@ def _createAndConnectModem():
         if _force_4g == 'yes' and modem.isSimComModem:
             try:
                 modem.write('AT+CNMP=38')
-                logging.debug("Forced LTE-only network mode (AT+CNMP=38)")
+                logging.info("Forced LTE-only network mode (AT+CNMP=38)")
             except Exception as e:
                 logging.error("Failed to force LTE-only network mode (AT+CNMP=38) : %s", e)
         if _smsc != 'None':
@@ -112,7 +112,7 @@ def _createAndConnectModem():
             modem.write(f'AT+CSCA="{_smsc}"')
         logging.debug("Waiting for network...")
         modem.waitForNetworkCoverage(timeout=_cycle)
-        logging.debug("Network coverage acquired")
+        logging.info("Network coverage acquired")
         if modem.isSimComModem:
             try:
                 # First field of the response is the actual RAT in use (LTE/WCDMA/GSM/NO SERVICE...) -
@@ -176,8 +176,8 @@ def listen():
     global gsm
     if j_socket_instance:
         j_socket_instance.open()
-    logging.debug("Start listening...")
-    logging.debug("Connecting to GSM Modem...")
+    logging.info("Daemon started, socket ready to receive commands from Jeedom")
+    logging.info("Connecting to GSM Modem...")
     _setModemStatus('connecting')
     try:
         gsm = _createAndConnectModem()
@@ -248,14 +248,13 @@ def read_socket():
 
 
 def handler(signum=None, frame=None):
-    logging.debug("Signal %i caught, exiting...", signum)
+    logging.info("Signal %i caught, exiting...", signum)
     shutdown()
 
 
 def shutdown():
-    logging.debug("Shutdown")
-    # Envoi synchrone borné (pas thread_change/send_change_immediate) : os._exit() plus bas tuerait
-    # un thread avant l'envoi, et thread_change() pourrait bloquer l'arrêt jusqu'à 6min (retry x 120s)
+    logging.info("Shutting down daemon, cleaning up before exit")
+    # Envoi synchrone : garantit que Jeedom reflète bien l'état déconnecté avant la fin du process
     if j_com_instance:
         j_com_instance.send_change_sync({'number': 'modem_status', 'status': 'disconnected'})
         j_com_instance.send_change_sync({'number': 'signal_strength', 'message': '-1'})

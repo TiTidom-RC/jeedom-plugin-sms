@@ -101,15 +101,20 @@ class sms extends eqLogic {
 		$pid_file = jeedom::getTmpFolder('sms') . '/deamon.pid';
 		if (file_exists($pid_file)) {
 			$pid = intval(trim(file_get_contents($pid_file)));
-			system::kill($pid);
+			if ($pid > 0) {
+				system::kill($pid, false); // SIGTERM seul, sans SIGKILL immédiat
+				for ($i = 0; $i < 30 && file_exists($pid_file); $i++) {
+					usleep(100000); // Attend max 3s que le processus meure
+				}
+			}
+			@unlink($pid_file);
 		}
-		system::kill('smsd.py');
+		system::kill('smsd.py'); // SIGKILL de sécurité si zombie
 		system::fuserk(config::byKey('socketport', 'sms'));
 		$port = config::byKey('port', 'sms');
 		if ($port != 'auto') {
 			system::fuserk(jeedom::getUsbMapping($port));
 		}
-		sleep(1);
 	}
 
 	/*     * *********************Méthode d'instance************************* */
