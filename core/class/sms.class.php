@@ -150,6 +150,36 @@ class sms extends eqLogic {
 		$connection->setSubType('string');
 		$connection->save();
 
+		$connectionState = $this->getCmd(null, 'connection_state');
+		if (!is_object($connectionState)) {
+			$connectionState = new smsCmd();
+			$connectionState->setEqLogic_id($this->getId());
+			$connectionState->setLogicalId('connection_state');
+			$connectionState->setIsVisible(0);
+			$connectionState->setName(__('Connexion (Code)', __FILE__));
+			$connectionState->setIsHistorized(1);
+			$connectionState->setConfiguration('repeatEventManagement', 'always');
+			$connectionState->setTemplate('dashboard', 'core::tile');
+			$connectionState->setTemplate('mobile', 'core::tile');
+		}
+		$connectionState->setType('info');
+		$connectionState->setSubType('numeric');
+		$connectionState->save();
+
+		$online = $this->getCmd(null, 'online');
+		if (!is_object($online)) {
+			$online = new smsCmd();
+			$online->setEqLogic_id($this->getId());
+			$online->setLogicalId('online');
+			$online->setIsVisible(0);
+			$online->setName(__('En Ligne', __FILE__));
+			$online->setIsHistorized(1);
+			$online->setConfiguration('repeatEventManagement', 'always');
+		}
+		$online->setType('info');
+		$online->setSubType('binary');
+		$online->save();
+
 		$sms = $this->getCmd(null, 'sms');
 		if (!is_object($sms)) {
 			$sms = new smsCmd();
@@ -218,7 +248,7 @@ class smsCmd extends cmd {
 	/*     * *********************Méthode d'instance************************* */
 
 	public function dontRemoveCmd() {
-		if ($this->getLogicalId() == 'signal' || $this->getLogicalId() == 'connection') {
+		if (in_array($this->getLogicalId(), array('signal', 'connection', 'connection_state', 'online'))) {
 			return true;
 		}
 		if (strpos($this->getLogicalId(), 'delivery_status_') === 0 || strpos($this->getLogicalId(), 'delivery_success_') === 0) {

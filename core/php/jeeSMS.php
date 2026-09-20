@@ -18,7 +18,7 @@
 require_once dirname(__FILE__) . "/../../../../core/php/core.inc.php";
 
 if (!jeedom::apiAccess(init('apikey'), 'sms')) {
-	echo __('Vous n\'etes pas autorisé à effectuer cette action', __FILE__);
+	echo __('Vous n\'êtes pas autorisé à effectuer cette action', __FILE__);
 	die();
 }
 if (init('test') != '') {
@@ -47,29 +47,43 @@ if (isset($result['number']) && $result['number'] == 'network_name' && isset($re
 }
 
 if (isset($result['number']) && $result['number'] == 'modem_status' && isset($result['status'])) {
+	// connectionState : échelle de 0 (déconnecté) à 4 (connecté) ; repeatEventManagement=always sur la cmd fait historiser chaque changement d'état même à valeur identique (ex : plusieurs tentatives de reconnexion)
+	$connectionState = null;
+	$online = null;
 	switch ($result['status']) {
 		case 'connecting':
 			$message = __('Connexion en cours', __FILE__);
+			$connectionState = 3;
+			$online = 0;
 			break;
 		case 'connected':
 			$message = __('Connecté', __FILE__);
+			$connectionState = 4;
+			$online = 1;
 			break;
 		case 'searching':
 			$message = __('Recherche opérateur', __FILE__);
+			$connectionState = 2;
+			$online = 0;
 			break;
 		case 'reconnecting':
 			$message = __('Reconnexion', __FILE__) . ' ' . $result['attempt'] . '/' . $result['max_attempts'];
+			$connectionState = 1;
+			$online = 0;
 			break;
 		case 'disconnected':
 			$message = __('Déconnecté', __FILE__);
+			$connectionState = 0;
+			$online = 0;
 			break;
 		default:
 			$message = $result['status'];
 	}
 	foreach (eqLogic::byType('sms') as $eqLogic) {
-		$cmd = $eqLogic->getCmd(null, 'connection');
-		if (is_object($cmd)) {
-			$cmd->event($message);
+		$eqLogic->checkAndUpdateCmd('connection', $message);
+		if ($connectionState !== null && $online !== null) {
+			$eqLogic->checkAndUpdateCmd('connection_state', $connectionState);
+			$eqLogic->checkAndUpdateCmd('online', $online);
 		}
 	}
 	die();
@@ -80,7 +94,7 @@ if (isset($result['number']) && $result['number'] == 'delivery_report' && isset(
 	if (strlen($destination) == 11) {
 		$destination = '+' . $destination;
 	}
-	$formatedDestination = '0' . substr($destination, 3);
+	$formattedDestination = '0' . substr($destination, 3);
 	$label = ($result['status'] == 'delivered') ? __('Livré', __FILE__) : __('Échec', __FILE__);
 	$statusText = $label . ' : ' . $destination . ' (' . date('d/m/Y H:i:s') . ')';
 	$success = ($result['status'] == 'delivered') ? 1 : 0;
@@ -91,7 +105,7 @@ if (isset($result['number']) && $result['number'] == 'delivery_report' && isset(
 			if ($cmd->getSubType() != 'message' || $cmd->getLogicalId() == 'send_to_custom_number') {
 				continue;
 			}
-			if (strpos($cmd->getConfiguration('phonenumber'), $destination) === false && strpos($cmd->getConfiguration('phonenumber'), $formatedDestination) === false) {
+			if (strpos($cmd->getConfiguration('phonenumber'), $destination) === false && strpos($cmd->getConfiguration('phonenumber'), $formattedDestination) === false) {
 				continue;
 			}
 			$found = true;
@@ -150,17 +164,17 @@ if (isset($result['devices'])) {
 		if (strlen($number) == 11) {
 			$number = '+' . $number;
 		}
-		$formatedPhoneNumber = '0' . substr($number, 3);
+		$formattedPhoneNumber = '0' . substr($number, 3);
 		$reply = '';
 		$smsOk = false;
 		foreach ($eqLogics as $eqLogic) {
 			/** @var cmd $cmd */
 			foreach ($eqLogic->getCmd() as $cmd) {
-				if (strpos($cmd->getConfiguration('phonenumber'), $number) === false && strpos($cmd->getConfiguration('phonenumber'), $formatedPhoneNumber) === false) {
+				if (strpos($cmd->getConfiguration('phonenumber'), $number) === false && strpos($cmd->getConfiguration('phonenumber'), $formattedPhoneNumber) === false) {
 					continue;
 				}
 				$smsOk = true;
-				log::add('sms', 'info', __('Message venant de ', __FILE__) . $formatedPhoneNumber . ' : ' . $message);
+				log::add('sms', 'info', __('Message venant de ', __FILE__) . $formattedPhoneNumber . ' : ' . $message);
 				if ($cmd->askResponse($message)) {
 					continue (3);
 				}
@@ -170,7 +184,7 @@ if (isset($result['devices'])) {
 			if (!$smsOk) {
 				if ($eqLogic->getConfiguration('allowUnknownOrigin', 0) == 1) {
 					if ($eqLogic->getConfiguration('autoAddNewNumber', 0) == 1) {
-						log::add('sms', 'info', __('Message venant d\'un numéro inconnu, création auto activée:', __FILE__) . secureXSS($number) . ' (' . secureXSS($formatedPhoneNumber) . ') : ' . secureXSS($message));
+						log::add('sms', 'info', __('Message venant d\'un numéro inconnu, création auto activée:', __FILE__) . secureXSS($number) . ' (' . secureXSS($formattedPhoneNumber) . ') : ' . secureXSS($message));
 						$new_number = new smsCmd();
 						$new_number->setType('action');
 						$new_number->setSubType('message');
@@ -181,7 +195,7 @@ if (isset($result['devices'])) {
 
 						handleMessage($new_number, $number, $message);
 					} else {
-						log::add('sms', 'info', __('Message venant d\'un numéro inconnu mais les numéros inconnus sont autorisés : ', __FILE__) . secureXSS($number) . ' (' . secureXSS($formatedPhoneNumber) . ') : ' . secureXSS($message));
+						log::add('sms', 'info', __('Message venant d\'un numéro inconnu mais les numéros inconnus sont autorisés : ', __FILE__) . secureXSS($number) . ' (' . secureXSS($formattedPhoneNumber) . ') : ' . secureXSS($message));
 						$eqLogic->checkAndUpdateCmd('sms', $message);
 						$eqLogic->checkAndUpdateCmd('sender', $number);
 					}
@@ -191,7 +205,7 @@ if (isset($result['devices'])) {
 		}
 
 		if (!$smsOk) {
-			log::add('sms', 'info', __('Message venant d\'un numéro non autorisé : ', __FILE__) . secureXSS($number) . ' (' . secureXSS($formatedPhoneNumber) . ') : ' . secureXSS($message));
+			log::add('sms', 'info', __('Message venant d\'un numéro non autorisé : ', __FILE__) . secureXSS($number) . ' (' . secureXSS($formattedPhoneNumber) . ') : ' . secureXSS($message));
 		}
 	}
 }
@@ -206,7 +220,7 @@ if (isset($result['devices'])) {
  */
 function handleMessage($cmd, $number, $message) {
 	/** @var eqLogic */
-	$eqLogic = $cmd->getEqlogic();
+	$eqLogic = $cmd->getEqLogic();
 	if ($eqLogic->getConfiguration('disableInteract', '0') == '0') {
 		$params = array('plugin' => 'sms');
 		if ($cmd->getConfiguration('user') != '') {

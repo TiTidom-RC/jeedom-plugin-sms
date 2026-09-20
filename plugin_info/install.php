@@ -28,17 +28,14 @@ function sms_update() {
 	if (config::byKey('api::sms::mode') == '') {
 		config::save('api::sms::mode', 'localhost');
 	}
-	// Crée les commandes compagnon "Statut"/"Remis" manquantes sur les contacts créés avant l'ajout de cette fonctionnalité
+	// Crée les commandes manquantes sur les équipements/contacts créés avant l'ajout de ces fonctionnalités
 	foreach (eqLogic::byType('sms') as $eqLogic) {
 		foreach ($eqLogic->getCmd('action') as $cmd) {
 			if ($cmd->getSubType() == 'message' && (!is_object($eqLogic->getCmd(null, 'delivery_status_' . $cmd->getId())) || !is_object($eqLogic->getCmd(null, 'delivery_success_' . $cmd->getId())))) {
 				$cmd->save();
 			}
 		}
-	}
-	// Crée la commande "Connexion" manquante sur les contacts créés avant l'ajout de cette fonctionnalité
-	foreach (eqLogic::byType('sms') as $eqLogic) {
-		if (!is_object($eqLogic->getCmd(null, 'connection'))) {
+		if (!is_object($eqLogic->getCmd(null, 'connection')) || !is_object($eqLogic->getCmd(null, 'connection_state')) || !is_object($eqLogic->getCmd(null, 'online'))) {
 			$eqLogic->save();
 		}
 	}
