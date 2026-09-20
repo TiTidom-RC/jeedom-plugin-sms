@@ -302,7 +302,7 @@ class GsmModem(SerialComms):
         # Load outgoing call status updates based on identified modem features
         if callUpdateTableHint == 1:
             # Use Hauwei's ^NOTIFICATIONs
-            self.log.info('Loading Huawei call state update table')
+            self.log.debug('Loading Huawei call state update table')
             self._callStatusUpdates = ((re.compile(r'^\^ORIG:(\d),(\d)$'), self._handleCallInitiated),
                                        (re.compile(r'^\^CONN:(\d),(\d)$'), self._handleCallAnswered),
                                        (re.compile(r'^\^CEND:(\d),(\d+),(\d)+,(\d)+$'), self._handleCallEnded))
@@ -312,7 +312,7 @@ class GsmModem(SerialComms):
             Call.dtmfSupport = True
         elif callUpdateTableHint == 2:
             # Wavecom modem: +WIND notifications supported
-            self.log.info('Loading Wavecom call state update table')
+            self.log.debug('Loading Wavecom call state update table')
             self._callStatusUpdates = ((re.compile(r'^\+WIND: 5,(\d)$'), self._handleCallInitiated),
                                        (re.compile(r'^OK$'), self._handleCallAnswered),
                                        (re.compile(r'^\+WIND: 6,(\d)$'), self._handleCallEnded))
@@ -322,7 +322,7 @@ class GsmModem(SerialComms):
                 Call.dtmfSupport = True
         elif callUpdateTableHint == 3:  # ZTE
             # Use ZTE notifications ("CONNECT"/"HANGUP", but no "call initiated" notification)
-            self.log.info('Loading ZTE call state update table')
+            self.log.debug('Loading ZTE call state update table')
             self._callStatusUpdates = ((re.compile(r'^CONNECT$'), self._handleCallAnswered),
                                        (re.compile(r'^HANGUP:\s*(\d+)$'), self._handleCallEnded),
                                        (re.compile(r'^OK$'), self._handleCallRejected))
@@ -332,8 +332,12 @@ class GsmModem(SerialComms):
             if commands is None:  # ZTE uses standard +VTS for DTMF
                 Call.dtmfSupport = True
         else:
-            # Unknown modem - we do not know what its call updates look like. Use polling instead
-            self.log.info('Unknown/generic modem type - will use polling for call state updates')
+            # No dedicated call status update table (SimCom included - detected above for DTMF,
+            # but has no known call state notification format here) - fall back to polling
+            if self._isSimComModem():
+                self.log.debug('SimCom modem detected - no call state update table for it, will use polling if needed')
+            else:
+                self.log.debug('Unknown/generic modem type - will use polling for call state updates')
             self._mustPollCallStatus = True
             self._pollCallStatusRegex = re.compile(r'^\+CLCC:\s+(\d+),(\d),(\d),(\d),([^,]),"([^,]*)",(\d+)$')
             self._waitForAtdResponse = True  # Most modems return OK immediately after issuing ATD
