@@ -68,14 +68,16 @@ def _isTransientNetworkError(e):
 
 
 _modem_status = None
+_modem_status_extra = None
 
 
 def _setModemStatus(status, **kwargs):
-    """Push the modem connection status to Jeedom (deduplicated, PHP does the display translation)"""
-    global _modem_status
-    if status == _modem_status:
+    """Push the modem connection status to Jeedom (deduplicated on status+details, PHP does the display translation)"""
+    global _modem_status, _modem_status_extra
+    if status == _modem_status and kwargs == _modem_status_extra:
         return
     _modem_status = status
+    _modem_status_extra = kwargs
     if j_com_instance:
         change = {'number': 'modem_status', 'status': status}
         change.update(kwargs)
