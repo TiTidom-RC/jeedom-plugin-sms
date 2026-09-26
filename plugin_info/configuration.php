@@ -204,7 +204,7 @@ if (!isConnect('admin')) {
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label">{{Délai d'expiration des fragments SMS incomplets (s)}}
+                <label class="col-lg-3 control-label">{{Expiration des fragments incomplets (s)}}
                     <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
                     <sup><i class="fas fa-question-circle tooltips" title="{{Si un SMS multi-parties (message long) n'est jamais reçu en entier, les fragments déjà reçus sont délivrés tels quels après ce délai, avec un marqueur aux emplacements manquants}}"></i></sup>
                 </label>
@@ -233,8 +233,9 @@ if (!isConnect('admin')) {
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label">{{Nombre maximum de tentatives avant redémarrage complet du démon}}
+                <label class="col-lg-3 control-label">{{Nombre maximum de tentatives}}
                     <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
+                    <sup><i class="fas fa-question-circle tooltips" title="{{Au-delà de ce nombre de tentatives infructueuses, le démon redémarre complètement}}"></i></sup>
                 </label>
                 <div class="col-lg-1">
                     <input class="configKey form-control" data-l1key="reconnectMaxAttempts" />
