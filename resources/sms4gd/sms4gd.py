@@ -246,7 +246,7 @@ def read_socket():
         logging.debug("Message received from Jeedom socket")
         message = json.loads(JEEDOM_SOCKET_MESSAGE.get().decode("utf-8"))
         if message['apikey'] != _apikey:
-            logging.error("Invalid apikey from socket : %s", message)
+            logging.error("Invalid apikey from socket (number=%s)", message.get('number'))
             return
         if gsm:
             try:
@@ -376,7 +376,7 @@ logging.info('Device : %s', _device)
 logging.info('Callback : %s', _callback)
 logging.info('Cycle : %s', _cycle)
 logging.info('Serial rate : %s', _serial_rate)
-logging.info('Pin : %s', _pin)
+logging.info('Pin : %s', '***' if _pin and _pin != 'None' else _pin)
 logging.info('Text mode : %s', _text_mode)
 logging.info('SMSC : %s', _smsc)
 logging.info('Force 4G only : %s', _force_4g)
