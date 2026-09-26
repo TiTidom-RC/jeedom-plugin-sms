@@ -108,7 +108,9 @@ if (!isConnect('admin')) {
         <div>
             <legend><i class="fas fa-sim-card"></i> {{Modem}}</legend>
             <div class="form-group">
-                <label class="col-lg-3 control-label">{{Port SMS}}</label>
+                <label class="col-lg-3 control-label">{{Port SMS}}
+                    <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
+                </label>
                 <div class="col-lg-3">
                     <select class="configKey form-control" data-l1key="port">
                         <option value="auto">{{Auto}}</option>
@@ -124,7 +126,9 @@ if (!isConnect('admin')) {
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label">{{Vitesse de communication (bauds)}}</label>
+                <label class="col-lg-3 control-label">{{Vitesse de communication (bauds)}}
+                    <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
+                </label>
                 <div class="col-lg-2">
                     <select class="configKey form-control" data-l1key="serialRate">
                         <option value="115200">115200</option>
@@ -133,21 +137,29 @@ if (!isConnect('admin')) {
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label">{{Code pin (laisser vide s'il n'y en a pas)}}</label>
+                <label class="col-lg-3 control-label">{{Code pin (laisser vide s'il n'y en a pas)}}
+                    <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
+                </label>
                 <div class="col-lg-2">
                     <input type="password" class="configKey form-control" data-l1key="pin" />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label">{{Texte mode}}</label>
+                <label class="col-lg-3 control-label">{{Texte mode}}
+                    <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
+                    <sup><i class="fas fa-question-circle tooltips" title="{{A utiliser si vous ne recevez pas de message (compatibilité avec un maximum de modem) mais enleve le support des SMS multiple et des caractères spéciaux}}"></i></sup>
+                </label>
                 <div class="col-lg-1">
-                    <input type="checkbox" class="configKey" data-l1key="textMode" title='{{A utiliser si vous ne recevez pas de message (compatibilité avec un maximum de modem) mais enleve le support des SMS multiple et des caractères spéciaux}}' />
+                    <input type="checkbox" class="configKey" data-l1key="textMode" />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label">{{Forcer le mode 4G uniquement}}</label>
+                <label class="col-lg-3 control-label">{{Forcer le mode 4G uniquement}}
+                    <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
+                    <sup><i class="fas fa-question-circle tooltips" title="{{Recommandé si votre opérateur a coupé la 2G/3G : évite au modem de perdre du temps à les rechercher. Attention, si la couverture 4G est absente à un endroit, le modem ne se repliera pas sur 2G/3G. Uniquement pris en compte sur les modems SimCom (ex : SIM7600G-H)}}"></i></sup>
+                </label>
                 <div class="col-lg-1">
-                    <input type="checkbox" class="configKey" data-l1key="force4gOnly" title='{{Recommandé si votre opérateur a coupé la 2G/3G : évite au modem de perdre du temps à les rechercher. Attention, si la couverture 4G est absente à un endroit, le modem ne se repliera pas sur 2G/3G. Uniquement pris en compte sur les modems SimCom (ex : SIM7600G-H)}}' />
+                    <input type="checkbox" class="configKey" data-l1key="force4gOnly" />
                 </div>
             </div>
             <div class="form-group">
@@ -174,40 +186,56 @@ if (!isConnect('admin')) {
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label">{{Passerelle SMS / SMS Gateway (en cas d'erreur : CMS 330 SMSC number not set)}}</label>
+                <label class="col-lg-3 control-label">{{Passerelle SMS (SMSC)}}
+                    <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
+                    <sup><i class="fas fa-question-circle tooltips" title="{{A renseigner en cas d'erreur CMS 330 (SMSC number not set). Utiliser le code #*#*4636#*#* sur un mobile pour trouver le SMSC de votre opérateur}}"></i></sup>
+                </label>
                 <div class="col-lg-2">
-                    <input class="configKey form-control" data-l1key="smsc" title='{{Utiliser le code #*#*4636#*#* sur un mobile pour trouver le SMSC de votre opérateur}}' />
+                    <input class="configKey form-control" data-l1key="smsc" />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label">{{Demander un accusé de réception}}</label>
+                <label class="col-lg-3 control-label">{{Demander un accusé de réception}}
+                    <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
+                    <sup><i class="fas fa-question-circle tooltips" title="{{Le démon tentera de récupérer le statut de livraison (livré / échec) de chaque message envoyé}}"></i></sup>
+                </label>
                 <div class="col-lg-1">
-                    <input type="checkbox" class="configKey" data-l1key="deliveryReport" title='{{Le démon tentera de récupérer le statut de livraison (livré / échec) de chaque message envoyé}}' />
+                    <input type="checkbox" class="configKey" data-l1key="deliveryReport" />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label">{{Délai d'expiration des fragments SMS incomplets (s)}}</label>
+                <label class="col-lg-3 control-label">{{Délai d'expiration des fragments SMS incomplets (s)}}
+                    <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
+                    <sup><i class="fas fa-question-circle tooltips" title="{{Si un SMS multi-parties (message long) n'est jamais reçu en entier, les fragments déjà reçus sont délivrés tels quels après ce délai, avec un marqueur aux emplacements manquants}}"></i></sup>
+                </label>
                 <div class="col-lg-1">
-                    <input class="configKey form-control" data-l1key="concatPartsTtl" title="{{Si un SMS multi-parties (message long) n'est jamais reçu en entier, les fragments déjà reçus sont délivrés tels quels après ce délai, avec un marqueur aux emplacements manquants}}" />
+                    <input class="configKey form-control" data-l1key="concatPartsTtl" />
                 </div>
             </div>
         </div>
         <div>
             <legend><i class="fas fa-sync-alt"></i> {{Reconnexion automatique}}</legend>
             <div class="form-group">
-                <label class="col-lg-3 control-label">{{Délai avant la première tentative (s)}}</label>
+                <label class="col-lg-3 control-label">{{Délai avant la première tentative (s)}}
+                    <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
+                    <sup><i class="fas fa-question-circle tooltips" title="{{Ce délai double à chaque nouvel échec, jusqu'au délai maximum ci-dessous}}"></i></sup>
+                </label>
                 <div class="col-lg-1">
-                    <input class="configKey form-control" data-l1key="reconnectBaseDelay" title="{{Ce délai double à chaque nouvel échec, jusqu'au délai maximum ci-dessous}}" />
+                    <input class="configKey form-control" data-l1key="reconnectBaseDelay" />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label">{{Délai maximum entre deux tentatives (s)}}</label>
+                <label class="col-lg-3 control-label">{{Délai maximum entre deux tentatives (s)}}
+                    <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
+                </label>
                 <div class="col-lg-1">
                     <input class="configKey form-control" data-l1key="reconnectMaxDelay" />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label">{{Nombre maximum de tentatives avant redémarrage complet du démon}}</label>
+                <label class="col-lg-3 control-label">{{Nombre maximum de tentatives avant redémarrage complet du démon}}
+                    <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
+                </label>
                 <div class="col-lg-1">
                     <input class="configKey form-control" data-l1key="reconnectMaxAttempts" />
                 </div>
