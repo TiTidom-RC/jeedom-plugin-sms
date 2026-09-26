@@ -110,6 +110,7 @@ if (!isConnect('admin')) {
             <div class="form-group">
                 <label class="col-lg-3 control-label">{{Port SMS}}
                     <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
+                    <sup><i class="fas fa-question-circle tooltips" title="{{Privilégiez un port /dev/serial/by-id/... (stable) plutôt qu'un /dev/ttyUSB* (numérotation pouvant changer après un redémarrage ou un rebranchement)}}"></i></sup>
                 </label>
                 <div class="col-lg-3">
                     <select class="configKey form-control" data-l1key="port">
@@ -126,8 +127,9 @@ if (!isConnect('admin')) {
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label">{{Vitesse de communication (bauds)}}
+                <label class="col-lg-3 control-label">{{Vitesse (bauds)}}
                     <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
+                    <sup><i class="fas fa-question-circle tooltips" title="{{115200 convient à la plupart des modems ; 9600 peut être utile avec un modem plus ancien en cas de problème de communication}}"></i></sup>
                 </label>
                 <div class="col-lg-2">
                     <select class="configKey form-control" data-l1key="serialRate">
@@ -137,8 +139,9 @@ if (!isConnect('admin')) {
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label">{{Code pin (laisser vide s'il n'y en a pas)}}
+                <label class="col-lg-3 control-label">{{Code PIN}}
                     <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
+                    <sup><i class="fas fa-question-circle tooltips" title="{{Laisser vide si votre carte SIM n'a pas de code PIN}}"></i></sup>
                 </label>
                 <div class="col-lg-2">
                     <input type="password" class="configKey form-control" data-l1key="pin" />
