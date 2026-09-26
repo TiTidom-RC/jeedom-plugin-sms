@@ -295,6 +295,7 @@ _pidfile = '/tmp/sms4gd.pid'
 _apikey = ''
 _callback = ''
 _cycle = 30
+_cycleComm = 0.5  # cycle du buffer add_changes (jeedom_com), indépendant du cycle de scrutation principal
 _serial_rate = 9600
 _pin = 'None'
 _text_mode = 'no'
@@ -396,7 +397,7 @@ signal.signal(signal.SIGTERM, handler)
 
 try:
     jeedom_utils.write_pid(str(_pidfile))
-    j_com_instance = jeedom_com(apikey=_apikey, url=_callback, cycle=_cycle)
+    j_com_instance = jeedom_com(apikey=_apikey, url=_callback, cycle=_cycleComm)
     if not j_com_instance.test():
         logging.error('Network communication issues. Please fix your Jeedom network configuration.')
         shutdown()

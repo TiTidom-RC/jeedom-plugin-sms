@@ -15,9 +15,10 @@
 #
 
 import logging
-import threading
+import json
+import time
+from threading import Thread
 import requests
-import datetime
 from collections.abc import Mapping
 import serial
 import os
@@ -31,52 +32,34 @@ import unicodedata
 
 class jeedom_com():
     def __init__(self, apikey='', url='', cycle=0.5, retry=3):
-        self.apikey = apikey
-        self.url = url
-        self.cycle = cycle
-        self.retry = retry
-        self.changes = {}
-        if cycle > 0:
-            self.send_changes_async()
-        logging.debug('Init request module v%s' % (str(requests.__version__),))  # type: ignore
+        self._apikey = apikey
+        self._url = url
+        # Garde-fou : une valeur hors bornes (0, négative, ou démesurée) retombe sur un défaut sûr
+        self._cycle = cycle if (cycle > 0 and cycle < 10) else 0.5
+        self._retry = retry
+        self._changes = {}
+        if self._cycle > 0:
+            Thread(target=self.__thread_changes_async, daemon=True).start()
+        logging.debug('Init request module v%s', requests.__version__)  # type: ignore
 
-    def send_changes_async(self):
-        try:
-            if len(self.changes) == 0:
-                resend_changes = threading.Timer(self.cycle, self.send_changes_async)
-                resend_changes.start()
-                return
-            start_time = datetime.datetime.now()
-            changes = self.changes
-            self.changes = {}
-            logging.debug('Send to jeedom : ' + str(changes))
-            i = 0
-            while i < self.retry:
-                try:
-                    r = requests.post(self.url + '?apikey=' + self.apikey, json=changes, timeout=(0.5, 120), verify=False)
-                    if r.status_code == requests.codes.ok:
-                        break
-                except Exception as error:
-                    logging.error('Error on send request to jeedom ' + str(error) + ' retry : ' + str(i) + '/' + str(self.retry))
-                i = i + 1
-            if r.status_code != requests.codes.ok:
-                logging.error('Error on send request to jeedom, return code %s' % (str(r.status_code),))
-            dt = datetime.datetime.now() - start_time
-            ms = (dt.days * 24 * 60 * 60 + dt.seconds) * 1000 + dt.microseconds / 1000.0
-            timer_duration = self.cycle - ms
-            if timer_duration < 0.1:
-                timer_duration = 0.1
-            if timer_duration > self.cycle:
-                timer_duration = self.cycle
-            resend_changes = threading.Timer(timer_duration, self.send_changes_async)
-            resend_changes.start()
-        except Exception as error:
-            logging.error('Critical error on  send_changes_async %s' % (str(error),))
-            resend_changes = threading.Timer(self.cycle, self.send_changes_async)
-            resend_changes.start()
+    def __thread_changes_async(self):
+        if self._cycle <= 0:
+            return
+        logging.debug('Start thread changes async')
+        while True:
+            try:
+                time.sleep(self._cycle)
+                if not self._changes:
+                    continue
+                changes = self._changes
+                self._changes = {}
+                self.__post_change(changes)
+                logging.debug('Send to jeedom: %s', changes)
+            except Exception as error:
+                logging.error('Critical error on __thread_changes_async :: %s', error)
 
     def add_changes(self, key, value):
-        if key.find('::') != -1:
+        if '::' in key:
             tmp_changes = {}
             changes = value
             for k in reversed(key.split('::')):
@@ -85,50 +68,51 @@ class jeedom_com():
                 tmp_changes[k] = changes
                 changes = tmp_changes
                 tmp_changes = {}
-            if self.cycle <= 0:
+            if self._cycle <= 0:
                 self.send_change_immediate(changes)
             else:
-                self.merge_dict(self.changes, changes)
+                self.merge_dict(self._changes, changes)
         else:
-            if self.cycle <= 0:
+            if self._cycle <= 0:
                 self.send_change_immediate({key: value})
             else:
-                self.changes[key] = value
+                self._changes[key] = value
 
     def send_change_immediate(self, change):
-        threading.Thread(target=self.thread_change, args=(change,)).start()
+        Thread(target=self.__post_change, args=(change,)).start()
 
-    def thread_change(self, change):
-        logging.debug('Send to jeedom :  %s' % (str(change),))
-        i = 0
-        while i < self.retry:
+    def __post_change(self, change):
+        logging.debug('Send to jeedom : %s', change)
+        for i in range(self._retry):
             try:
-                r = requests.post(self.url + '?apikey=' + self.apikey, json=change, timeout=(0.5, 120), verify=False)
+                r = requests.post(self._url + '?apikey=' + self._apikey, json=change, timeout=(0.5, 120), verify=False)
                 if r.status_code == requests.codes.ok:
-                    break
+                    return True
+                logging.warning('Error on send request to jeedom, return code %s', r.status_code)
             except Exception as error:
-                logging.error('Error on send request to jeedom ' + str(error) + ' retry : ' + str(i) + '/' + str(self.retry))
-            i = i + 1
+                logging.error('Error on send request to jeedom "%s" retry : %i/%i', error, i, self._retry)
+            time.sleep(0.5)
+        return False
 
     def send_change_sync(self, change, timeout=2):
         """Envoi synchrone, sans retry et avec un timeout court : pour un chemin critique comme
-        l'arrêt du démon, où thread_change() (retry x timeout jusqu'à 120s) bloquerait trop longtemps"""
-        logging.debug('Send to jeedom (sync) :  %s' % (str(change),))
+        l'arrêt du démon, où __post_change() (retry x timeout jusqu'à 120s) bloquerait trop longtemps"""
+        logging.debug('Send to jeedom (sync) : %s', change)
         try:
-            r = requests.post(self.url + '?apikey=' + self.apikey, json=change, timeout=timeout, verify=False)
+            r = requests.post(self._url + '?apikey=' + self._apikey, json=change, timeout=timeout, verify=False)
             if r.status_code != requests.codes.ok:
-                logging.error('Error on sync send request to jeedom, return code %s' % (str(r.status_code),))
+                logging.error('Error on sync send request to jeedom, return code %s', r.status_code)
                 return False
         except Exception as error:
-            logging.error('Error on sync send request to jeedom ' + str(error))
+            logging.error('Error on sync send request to jeedom :: %s', error)
             return False
         return True
 
     def set_change(self, changes):
-        self.changes = changes
+        self._changes = changes
 
     def get_change(self):
-        return self.changes
+        return self._changes
 
     def merge_dict(self, d1, d2):
         for k, v2 in d2.items():
@@ -140,12 +124,12 @@ class jeedom_com():
 
     def test(self):
         try:
-            response = requests.get(self.url + '?apikey=' + self.apikey, verify=False)
+            response = requests.get(self._url + '?apikey=' + self._apikey, verify=False)
             if response.status_code != requests.codes.ok:
-                logging.error('Callback error: %s %s. Please check your network configuration page' % (response.status_code, response.reason,))
+                logging.error('Callback error: %s %s. Please check your network configuration page', response.status_code, response.reason)
                 return False
         except Exception as e:
-            logging.error('Callback result as a unknown error: %s. Please check your network configuration page' % (str(e),))
+            logging.error('Callback result as a unknown error: %s. Please check your network configuration page', e)
             return False
         return True
 
@@ -172,7 +156,7 @@ class jeedom_utils():
 
     @staticmethod
     def stripped(str):
-        return "".join([i for i in str if i in range(32, 127)])
+        return "".join([i for i in str if ord(i) in range(32, 127)])
 
     @staticmethod
     def ByteToHex(byteStr):
@@ -295,12 +279,19 @@ JEEDOM_SOCKET_MESSAGE = Queue()
 class jeedom_socket_handler(StreamRequestHandler):
     def handle(self):
         global JEEDOM_SOCKET_MESSAGE
-        logging.debug("Client connected to [%s:%d]" % self.client_address)
+        logging.debug("Client connected to [%s:%d]", self.client_address[0], self.client_address[1])
         lg = self.rfile.readline()
         JEEDOM_SOCKET_MESSAGE.put(lg)
-        logging.debug("Message read from socket: " + str(lg.strip()))
+        try:
+            lgdecode = json.loads(lg.strip())
+            if lgdecode and lgdecode.get('apikey'):
+                lgdecode['apikey'] = '***'
+            logging.debug("Message read from socket :: %s", str(json.dumps(lgdecode).encode('utf-8')))
+        except Exception as error:
+            logging.error("JSON Exception :: %s", error)
+            logging.debug("Message read from socket (raw) :: %s", str(lg.strip()))
         self.netAdapterClientConnected = False
-        logging.debug("Client disconnected from [%s:%d]" % self.client_address)
+        logging.debug("Client disconnected from [%s:%d]", self.client_address[0], self.client_address[1])
 
 
 class jeedom_socket():
@@ -314,9 +305,9 @@ class jeedom_socket():
         self.netAdapter = TCPServer((self.address, self.port), jeedom_socket_handler)
         if self.netAdapter:
             logging.debug("Socket interface started")
-            threading.Thread(target=self.loopNetServer, args=()).start()
+            Thread(target=self.loopNetServer, daemon=True).start()
         else:
-            logging.debug("Cannot start socket interface")
+            logging.error("Cannot start socket interface")
 
     def loopNetServer(self):
         logging.debug("LoopNetServer Thread started")
