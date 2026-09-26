@@ -48,37 +48,14 @@ if (isset($result['number']) && $result['number'] == 'networkName' && isset($res
 
 if (isset($result['number']) && $result['number'] == 'modemStatus' && isset($result['status'])) {
 	// connectionState : échelle de 0 (déconnecté) à 4 (connecté) ; repeatEventManagement=always sur la cmd fait historiser chaque changement d'état même à valeur identique (ex : plusieurs tentatives de reconnexion)
-	$connectionState = null;
-	$online = null;
-	switch ($result['status']) {
-		case 'connecting':
-			$message = __('Connexion en cours', __FILE__);
-			$connectionState = 3;
-			$online = 0;
-			break;
-		case 'connected':
-			$message = __('Connecté', __FILE__);
-			$connectionState = 4;
-			$online = 1;
-			break;
-		case 'searching':
-			$message = __('Recherche opérateur', __FILE__);
-			$connectionState = 2;
-			$online = 0;
-			break;
-		case 'reconnecting':
-			$message = __('Reconnexion', __FILE__) . ' ' . $result['attempt'] . '/' . $result['max_attempts'];
-			$connectionState = 1;
-			$online = 0;
-			break;
-		case 'disconnected':
-			$message = __('Déconnecté', __FILE__);
-			$connectionState = 0;
-			$online = 0;
-			break;
-		default:
-			$message = $result['status'];
-	}
+	[$message, $connectionState, $online] = match ($result['status']) {
+		'connecting' => [__('Connexion en cours', __FILE__), 3, 0],
+		'connected' => [__('Connecté', __FILE__), 4, 1],
+		'searching' => [__('Recherche opérateur', __FILE__), 2, 0],
+		'reconnecting' => [__('Reconnexion', __FILE__) . ' ' . $result['attempt'] . '/' . $result['max_attempts'], 1, 0],
+		'disconnected' => [__('Déconnecté', __FILE__), 0, 0],
+		default => [$result['status'], null, null],
+	};
 	foreach (eqLogic::byType('sms4g') as $eqLogic) {
 		$eqLogic->checkAndUpdateCmd('connection', $message);
 		if ($connectionState !== null && $online !== null) {
@@ -101,7 +78,7 @@ if (isset($result['number']) && $result['number'] == 'deliveryReport' && isset($
 			if ($cmd->getSubType() != 'message' || $cmd->getLogicalId() == 'send_to_custom_number') {
 				continue;
 			}
-			if (strpos($cmd->getConfiguration('phonenumber'), $destination) === false && strpos($cmd->getConfiguration('phonenumber'), $formattedDestination) === false) {
+			if (!str_contains($cmd->getConfiguration('phonenumber'), $destination) && !str_contains($cmd->getConfiguration('phonenumber'), $formattedDestination)) {
 				continue;
 			}
 			$found = true;
@@ -132,7 +109,7 @@ if (isset($result['number']) && $result['number'] == 'deliveryReport' && isset($
 
 if (isset($result['number']) && $result['number'] == 'none' && isset($result['message'])) {
 	message::add('sms4g', 'Error : ' . $result['message'], '', 'sms4gcmderror');
-	if (strpos($result['message'], 'PIN') !== false) {
+	if (str_contains($result['message'], 'PIN')) {
 		config::save('deamonAutoMode', 0, 'sms4g');
 	}
 }
@@ -156,7 +133,7 @@ if (isset($result['devices'])) {
 		foreach ($eqLogics as $eqLogic) {
 			/** @var cmd $cmd */
 			foreach ($eqLogic->getCmd() as $cmd) {
-				if (strpos($cmd->getConfiguration('phonenumber'), $number) === false && strpos($cmd->getConfiguration('phonenumber'), $formattedPhoneNumber) === false) {
+				if (!str_contains($cmd->getConfiguration('phonenumber'), $number) && !str_contains($cmd->getConfiguration('phonenumber'), $formattedPhoneNumber)) {
 					continue;
 				}
 				$smsOk = true;

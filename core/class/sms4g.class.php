@@ -105,7 +105,7 @@ class sms4g extends eqLogic {
 			$packages = array();
 			foreach ($lines as $line) {
 				$line = trim($line);
-				if ($line === '' || strpos($line, '#') === 0) {
+				if ($line === '' || str_starts_with($line, '#')) {
 					continue; // Ignore les lignes vides et les commentaires
 				}
 				// Retire les extras [async], [dev], etc.
@@ -227,6 +227,7 @@ class sms4g extends eqLogic {
 
 	public static function deamon_start() {
 		self::deamon_stop();
+		self::getPyEnvVersion();
 		self::getPythonVersion();
 		$deamon_info = self::deamon_info();
 		if ($deamon_info['launchable'] != 'ok') {
@@ -432,7 +433,7 @@ class sms4gCmd extends cmd {
 		if (in_array($this->getLogicalId(), array('signal', 'connection', 'connection_state', 'online'))) {
 			return true;
 		}
-		if (strpos($this->getLogicalId(), 'delivery_status_') === 0 || strpos($this->getLogicalId(), 'delivery_success_') === 0) {
+		if (str_starts_with($this->getLogicalId(), 'delivery_status_') || str_starts_with($this->getLogicalId(), 'delivery_success_')) {
 			return true;
 		}
 		return false;
