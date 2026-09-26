@@ -60,7 +60,7 @@ def handleStatusReport(report):
     status = 'delivered' if report.deliveryStatus == StatusReport.DELIVERED else 'failed'
     logging.info("Delivery report for %s : %s (ref %s)", report.number, status, report.reference)
     if j_com_instance:
-        j_com_instance.send_change_immediate({'number': 'delivery_report', 'destination': report.number, 'status': status, 'reference': report.reference})
+        j_com_instance.send_change_immediate({'number': 'deliveryReport', 'destination': report.number, 'status': status, 'reference': report.reference})
 
 
 def _backoffDelay(attempt):
@@ -83,7 +83,7 @@ def _setModemStatus(status, **kwargs):
     _modem_status = status
     _modem_status_extra = kwargs
     if j_com_instance:
-        change = {'number': 'modem_status', 'status': status}
+        change = {'number': 'modemStatus', 'status': status}
         change.update(kwargs)
         j_com_instance.send_change_immediate(change)
 
@@ -127,7 +127,7 @@ def _createAndConnectModem():
                 logging.error("Failed to query network system info (AT+CPSI?) : %s", e)
         try:
             if j_com_instance:
-                j_com_instance.send_change_immediate({'number': 'network_name', 'message': str(modem.networkName)})
+                j_com_instance.send_change_immediate({'number': 'networkName', 'message': str(modem.networkName)})
         except Exception as e:
             logging.error("Exception during send_change_immediate: %s", e)
         for mem in ('ME', 'SM'):
@@ -156,7 +156,7 @@ def _reconnectLoop():
         pass
     # No modem instance to query while reconnecting - signalStrength convention (gsmmodem): -1 = unknown
     if j_com_instance:
-        j_com_instance.send_change_immediate({'number': 'signal_strength', 'message': '-1'})
+        j_com_instance.send_change_immediate({'number': 'signalStrength', 'message': '-1'})
     attempt = 0
     while attempt < _reconnect_max_attempts:
         attempt += 1
@@ -204,7 +204,7 @@ def listen():
                 except Exception as e:
                     logging.debug("Failed to read signal strength : %s", e)
                     ss = -1
-                j_com_instance.send_change_immediate({'number': 'signal_strength', 'message': str(ss)})
+                j_com_instance.send_change_immediate({'number': 'signalStrength', 'message': str(ss)})
             try:
                 if gsm:
                     gsm.waitForNetworkCoverage(timeout=_cycle)
@@ -249,7 +249,7 @@ def read_socket():
             except Exception as e:
                 logging.error("Failed to send SMS to %s : %s", message['number'], e)
                 if j_com_instance:
-                    j_com_instance.send_change_immediate({'number': 'delivery_report', 'destination': message['number'], 'status': 'failed'})
+                    j_com_instance.send_change_immediate({'number': 'deliveryReport', 'destination': message['number'], 'status': 'failed'})
 
 
 def handler(signum=None, frame=None):
@@ -261,8 +261,8 @@ def shutdown():
     logging.info("Shutting down daemon, cleaning up before exit")
     # Envoi synchrone : garantit que Jeedom reflète bien l'état déconnecté avant la fin du process
     if j_com_instance:
-        j_com_instance.send_change_sync({'number': 'modem_status', 'status': 'disconnected'})
-        j_com_instance.send_change_sync({'number': 'signal_strength', 'message': '-1'})
+        j_com_instance.send_change_sync({'number': 'modemStatus', 'status': 'disconnected'})
+        j_com_instance.send_change_sync({'number': 'signalStrength', 'message': '-1'})
     logging.debug("Removing PID file %s", _pidfile)
     try:
         os.remove(_pidfile)

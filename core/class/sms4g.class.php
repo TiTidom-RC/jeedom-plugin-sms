@@ -238,17 +238,17 @@ class sms4g extends eqLogic {
 		$cmd .= ' --device ' . $port;
 		$cmd .= ' --loglevel ' . log::convertLogLevel(log::getLogLevel('sms4g'));
 		$cmd .= ' --socketport ' . config::byKey('socketport', 'sms4g');
-		$cmd .= ' --serialrate ' . config::byKey('serial_rate', 'sms4g');
+		$cmd .= ' --serialrate ' . config::byKey('serialRate', 'sms4g');
 		$cmd .= ' --pin ' . config::byKey('pin', 'sms4g', 'None');
-		$cmd .= ' --textmode ' . ((config::byKey('text_mode', 'sms4g') == 1) ? 'yes' : 'no');
+		$cmd .= ' --textmode ' . ((config::byKey('textMode', 'sms4g') == 1) ? 'yes' : 'no');
 		$cmd .= ' --smsc ' . config::byKey('smsc', 'sms4g', 'None');
-		$cmd .= ' --force4g ' . ((config::byKey('force_4g_only', 'sms4g') == 1) ? 'yes' : 'no');
+		$cmd .= ' --force4g ' . ((config::byKey('force4gOnly', 'sms4g') == 1) ? 'yes' : 'no');
 		$cmd .= ' --cycle ' . config::byKey('cycle', 'sms4g');
-		$cmd .= ' --deliveryreport ' . ((config::byKey('delivery_report', 'sms4g', 0) == 1) ? 'yes' : 'no');
-		$cmd .= ' --reconnectbasedelay ' . config::byKey('reconnect_base_delay', 'sms4g', 5);
-		$cmd .= ' --reconnectmaxdelay ' . config::byKey('reconnect_max_delay', 'sms4g', 300);
-		$cmd .= ' --reconnectmaxattempts ' . config::byKey('reconnect_max_attempts', 'sms4g', 10);
-		$cmd .= ' --concatpartsttl ' . config::byKey('concat_parts_ttl', 'sms4g', 300);
+		$cmd .= ' --deliveryreport ' . ((config::byKey('deliveryReport', 'sms4g', 0) == 1) ? 'yes' : 'no');
+		$cmd .= ' --reconnectbasedelay ' . config::byKey('reconnectBaseDelay', 'sms4g', 5);
+		$cmd .= ' --reconnectmaxdelay ' . config::byKey('reconnectMaxDelay', 'sms4g', 300);
+		$cmd .= ' --reconnectmaxattempts ' . config::byKey('reconnectMaxAttempts', 'sms4g', 10);
+		$cmd .= ' --concatpartsttl ' . config::byKey('concatPartsTtl', 'sms4g', 300);
 		$cmd .= ' --callback ' . network::getNetworkAccess('internal', 'http:127.0.0.1:port:comp') . '/plugins/sms4g/core/php/jeesms4g.php';
 		$cmd .= ' --apikey ' . jeedom::getApiKey('sms4g');
 		$cmd .= ' --pid ' . jeedom::getTmpFolder('sms4g') . '/deamon.pid';
@@ -527,7 +527,7 @@ class sms4gCmd extends cmd {
 		} else {
 			$message = trim($_options['title'] . ' ' . $_options['message']);
 		}
-		if (config::byKey('text_mode', 'sms4g') == 1) {
+		if (config::byKey('textMode', 'sms4g') == 1) {
 			$message = self::cleanSMS(trim($message));
 		}
 		if (strlen($message) > config::byKey('maxChartByMessage', 'sms4g')) {

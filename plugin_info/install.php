@@ -41,14 +41,26 @@ function sms4g_install() {
 	if (config::byKey('socketport', 'sms4g') == '') {
 		config::save('socketport', '55114', 'sms4g');
 	}
-	if (config::byKey('serial_rate', 'sms4g') == '') {
-		config::save('serial_rate', '115200', 'sms4g');
+	if (config::byKey('serialRate', 'sms4g') == '') {
+		config::save('serialRate', '115200', 'sms4g');
 	}
 	if (config::byKey('cycle', 'sms4g') == '') {
 		config::save('cycle', '30', 'sms4g');
 	}
 	if (config::byKey('maxChartByMessage', 'sms4g') == '') {
 		config::save('maxChartByMessage', '140', 'sms4g');
+	}
+	if (config::byKey('concatPartsTtl', 'sms4g') == '') {
+		config::save('concatPartsTtl', '300', 'sms4g');
+	}
+	if (config::byKey('reconnectBaseDelay', 'sms4g') == '') {
+		config::save('reconnectBaseDelay', '5', 'sms4g');
+	}
+	if (config::byKey('reconnectMaxDelay', 'sms4g') == '') {
+		config::save('reconnectMaxDelay', '300', 'sms4g');
+	}
+	if (config::byKey('reconnectMaxAttempts', 'sms4g') == '') {
+		config::save('reconnectMaxAttempts', '10', 'sms4g');
 	}
 	if (config::byKey('debugInstallUpdates', 'sms4g') == '') {
 		config::save('debugInstallUpdates', '0', 'sms4g');
@@ -101,14 +113,26 @@ function sms4g_update() {
 	if (config::byKey('socketport', 'sms4g') == '') {
 		config::save('socketport', '55114', 'sms4g');
 	}
-	if (config::byKey('serial_rate', 'sms4g') == '') {
-		config::save('serial_rate', '115200', 'sms4g');
+	if (config::byKey('serialRate', 'sms4g') == '') {
+		config::save('serialRate', '115200', 'sms4g');
 	}
 	if (config::byKey('cycle', 'sms4g') == '') {
 		config::save('cycle', '30', 'sms4g');
 	}
 	if (config::byKey('maxChartByMessage', 'sms4g') == '') {
 		config::save('maxChartByMessage', '140', 'sms4g');
+	}
+	if (config::byKey('concatPartsTtl', 'sms4g') == '') {
+		config::save('concatPartsTtl', '300', 'sms4g');
+	}
+	if (config::byKey('reconnectBaseDelay', 'sms4g') == '') {
+		config::save('reconnectBaseDelay', '5', 'sms4g');
+	}
+	if (config::byKey('reconnectMaxDelay', 'sms4g') == '') {
+		config::save('reconnectMaxDelay', '300', 'sms4g');
+	}
+	if (config::byKey('reconnectMaxAttempts', 'sms4g') == '') {
+		config::save('reconnectMaxAttempts', '10', 'sms4g');
 	}
 	if (config::byKey('debugInstallUpdates', 'sms4g') == '') {
 		config::save('debugInstallUpdates', '0', 'sms4g');

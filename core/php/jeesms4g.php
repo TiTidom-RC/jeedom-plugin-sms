@@ -30,8 +30,8 @@ if (!is_array($result)) {
 	die();
 }
 
-if (isset($result['number']) && $result['number'] == 'signal_strength' && isset($result['message'])) {
-	config::save('signal_strength', $result['message'], 'sms4g');
+if (isset($result['number']) && $result['number'] == 'signalStrength' && isset($result['message'])) {
+	config::save('signalStrength', $result['message'], 'sms4g');
 	foreach (eqLogic::byType('sms4g') as $eqLogic) {
 		$cmd = $eqLogic->getCmd(null, 'signal');
 		if (is_object($cmd)) {
@@ -41,12 +41,12 @@ if (isset($result['number']) && $result['number'] == 'signal_strength' && isset(
 	die();
 }
 
-if (isset($result['number']) && $result['number'] == 'network_name' && isset($result['message'])) {
-	config::save('network_name', $result['message'], 'sms4g');
+if (isset($result['number']) && $result['number'] == 'networkName' && isset($result['message'])) {
+	config::save('networkName', $result['message'], 'sms4g');
 	die();
 }
 
-if (isset($result['number']) && $result['number'] == 'modem_status' && isset($result['status'])) {
+if (isset($result['number']) && $result['number'] == 'modemStatus' && isset($result['status'])) {
 	// connectionState : échelle de 0 (déconnecté) à 4 (connecté) ; repeatEventManagement=always sur la cmd fait historiser chaque changement d'état même à valeur identique (ex : plusieurs tentatives de reconnexion)
 	$connectionState = null;
 	$online = null;
@@ -89,7 +89,7 @@ if (isset($result['number']) && $result['number'] == 'modem_status' && isset($re
 	die();
 }
 
-if (isset($result['number']) && $result['number'] == 'delivery_report' && isset($result['destination']) && isset($result['status'])) {
+if (isset($result['number']) && $result['number'] == 'deliveryReport' && isset($result['destination']) && isset($result['status'])) {
 	[$destination, $formattedDestination] = formatSmsNumber($result['destination']);
 	$label = ($result['status'] == 'delivered') ? __('Livré', __FILE__) : __('Échec', __FILE__);
 	$statusText = $label . ' : ' . $destination . ' (' . date('d/m/Y H:i:s') . ')';
