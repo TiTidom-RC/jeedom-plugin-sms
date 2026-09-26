@@ -166,8 +166,10 @@ if (!isConnect('admin')) {
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-lg-3 control-label">{{Force du signal}}</label>
-                <div class="col-lg-2" title='{{-1 = signal inconnu (pas de lecture disponible actuellement)}}'>
+                <label class="col-lg-3 control-label">{{Force du signal}}
+                    <sup><i class="fas fa-question-circle tooltips" title="{{-1 = signal inconnu (pas de lecture disponible actuellement)}}"></i></sup>
+                </label>
+                <div class="col-lg-2">
                     <span class="configKey" data-l1key="signalStrength"></span> / 30
                 </div>
             </div>
