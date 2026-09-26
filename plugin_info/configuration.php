@@ -166,9 +166,11 @@ if (!isConnect('admin')) {
         <div>
             <legend><i class="fas fa-sms"></i> {{Messages}}</legend>
             <div class="form-group">
-                <label class="col-lg-3 control-label">{{Découper les messages par paquet de caractères}}</label>
+                <label class="col-lg-3 control-label">{{Découper au-delà de (caractères)}}
+                    <sup><i class="fas fa-question-circle tooltips" title="{{Au-delà de cette longueur, le message est envoyé en plusieurs SMS distincts plutôt qu'un seul. Par défaut 612 (4 parties) : certains opérateurs/modems anciens rejettent silencieusement un groupe de plus de 4 parties}}"></i></sup>
+                </label>
                 <div class="col-lg-1">
-                    <input class="configKey form-control" data-l1key="maxChartByMessage" title='{{Par defaut 140}}' />
+                    <input class="configKey form-control" data-l1key="maxChartByMessage" />
                 </div>
             </div>
             <div class="form-group">

@@ -48,7 +48,7 @@ function sms4g_install() {
 		config::save('cycle', '30', 'sms4g');
 	}
 	if (config::byKey('maxChartByMessage', 'sms4g') == '') {
-		config::save('maxChartByMessage', '140', 'sms4g');
+		config::save('maxChartByMessage', '612', 'sms4g');
 	}
 	if (config::byKey('concatPartsTtl', 'sms4g') == '') {
 		config::save('concatPartsTtl', '300', 'sms4g');
@@ -120,7 +120,7 @@ function sms4g_update() {
 		config::save('cycle', '30', 'sms4g');
 	}
 	if (config::byKey('maxChartByMessage', 'sms4g') == '') {
-		config::save('maxChartByMessage', '140', 'sms4g');
+		config::save('maxChartByMessage', '612', 'sms4g');
 	}
 	if (config::byKey('concatPartsTtl', 'sms4g') == '') {
 		config::save('concatPartsTtl', '300', 'sms4g');

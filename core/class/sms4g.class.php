@@ -530,27 +530,21 @@ class sms4gCmd extends cmd {
 		if (config::byKey('textMode', 'sms4g') == 1) {
 			$message = self::cleanSMS(trim($message));
 		}
-		if (strlen($message) > config::byKey('maxChartByMessage', 'sms4g')) {
-			$messages = str_split($message, config::byKey('maxChartByMessage', 'sms4g'));
-			foreach ($messages as $message_split) {
-				$values[] = json_encode(array('apikey' => jeedom::getApiKey('sms4g'), 'number' => $number, 'message' => $message_split));
-			}
+		// Au-delà de cette longueur, découpe en plusieurs groupes de SMS concaténés (norme GSM 03.40) plutôt qu'un seul : certains opérateurs/modems anciens rejettent silencieusement un groupe de plus de ~4 parties liées
+		$maxLength = config::byKey('maxChartByMessage', 'sms4g');
+		if ($maxLength > 0 && strlen($message) > $maxLength) {
+			$messageChunks = str_split($message, $maxLength);
 		} else {
-			$values[] = json_encode(array('apikey' => jeedom::getApiKey('sms4g'), 'number' => $number, 'message' => $message));
+			$messageChunks = array($message);
 		}
-		if (!isset($_options['number'])) {
+		if (isset($_options['number'])) {
+			$phonenumbers = array($number);
+		} else {
 			$phonenumbers = explode(';', $this->getConfiguration('phonenumber'));
-			if (is_array($phonenumbers) && count($phonenumbers) > 1) {
-				$tmp_values = array();
-				foreach ($values as $value) {
-					$value = json_decode($value, true);
-					foreach ($phonenumbers as $phonenumber) {
-						if (is_array($value)) {
-							$tmp_values[] = json_encode(array('apikey' => jeedom::getApiKey('sms4g'), 'number' => $phonenumber, 'message' => $value['message']));
-						}
-					}
-				}
-				$values = $tmp_values;
+		}
+		foreach ($phonenumbers as $phonenumber) {
+			foreach ($messageChunks as $messageChunk) {
+				$values[] = json_encode(array('apikey' => jeedom::getApiKey('sms4g'), 'number' => $phonenumber, 'message' => $messageChunk));
 			}
 		}
 		foreach ($values as $value) {

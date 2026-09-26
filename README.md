@@ -8,7 +8,7 @@ Avec ce plugin vous pouvez être notifié par SMS, poser une question ou déclen
 
 ## 🚀 Fonctionnalités principales
 
-- 📤 **Envoi de SMS** : notifications, réponses aux scénarios, envoi vers un ou plusieurs contacts
+- 📤 **Envoi de SMS** : notifications, réponses aux scénarios, envoi vers un ou plusieurs contacts, avec SMS concaténés standard (norme GSM) pour les messages longs
 - 📥 **Réception de SMS** : messages courts et **longs (multi-parties/concaténés)**, avec reconstruction fiable même sur les notifications temps réel (`+CMTI`)
 - ✅ **Accusés de réception** : suivi livré/échec par contact
 - 🔄 **Reconnexion automatique** en cas de perte du modem (backoff configurable)
