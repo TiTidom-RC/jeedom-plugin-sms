@@ -185,8 +185,10 @@ class GsmModem(SerialComms):
         self._commands = None  # List of supported AT commands
         # Pool of detected DTMF
         self.dtmfpool = []
-        # Buffer for multi-part SMS messages
+        # Buffer for multi-part SMS messages - guarded by _smsPartsLock (CMTI notifications each run in their own thread)
         self._smsParts = {}
+        self._smsPartsLastSeen = {}  # {(number, reference): monotonic() of the last part received for this group}
+        self._smsPartsLock = threading.Lock()
 
     def connect(self, pin: Optional[str] = None, waitingForModemToStartInSeconds: Union[int, float] = 0):
         """ Opens the port and initializes the modem and SIM card
@@ -1156,29 +1158,55 @@ class GsmModem(SerialComms):
             for msgStatus in states:
                 messages = self.listStoredSms(status=msgStatus, delete=True)
                 for sms in messages:
-                    if sms.concat:
-                        key = (sms.number, sms.concat.reference)
-                        if key not in self._smsParts:
-                            self._smsParts[key] = {}
-                        self._smsParts[key][sms.concat.number] = sms
-                        if len(self._smsParts[key]) == sms.concat.parts:
-                            # We have all parts; reassemble
-                            parts = []
-                            for i in range(1, sms.concat.parts + 1):
-                                parts.append(self._smsParts[key][i])
-                            # Use the first part as base
-                            fullSms = parts[0]
-                            fullSms.text = ''.join([p.text for p in parts])
-                            # Remove concatenation info as it is now a single logical message
-                            fullSms.concat = None
-                            del self._smsParts[key]
-                            self.smsReceivedCallback(fullSms)
-                        else:
-                            self.log.debug(f'Buffered part {sms.concat.number} of {sms.concat.parts} for SMS from {sms.number} (ref {sms.concat.reference})')
-                    else:
-                        self.smsReceivedCallback(sms)
+                    self._deliverOrBufferSms(sms)
         else:
             raise ValueError('GsmModem.smsReceivedCallback not set')
+
+    def _deliverOrBufferSms(self, sms):
+        """ Invokes smsReceivedCallback once per logical message: concatenated SMS parts are buffered
+        (thread-safe - notifications may be handled concurrently, one thread per batch) until all parts
+        of the same (number, concat reference) group have been received """
+        if not sms.concat:
+            self.smsReceivedCallback(sms)
+            return
+        with self._smsPartsLock:
+            key = (sms.number, sms.concat.reference)
+            self._smsParts.setdefault(key, {})[sms.concat.number] = sms
+            self._smsPartsLastSeen[key] = time.monotonic()
+            if len(self._smsParts[key]) != sms.concat.parts:
+                self.log.debug(f'Buffered part {sms.concat.number} of {sms.concat.parts} for SMS from {sms.number} (ref {sms.concat.reference})')
+                return
+            partsByNumber = self._smsParts.pop(key)
+            parts = [partsByNumber[i] for i in range(1, sms.concat.parts + 1)]
+            del self._smsPartsLastSeen[key]
+        # Use the first part as base, reassemble the full text, callback invoked outside the lock
+        fullSms = parts[0]
+        fullSms.text = ''.join(p.text for p in parts)
+        fullSms.concat = None
+        self.smsReceivedCallback(fullSms)
+
+    def purgeStaleSmsParts(self, maxAge):
+        """ Delivers concatenated SMS groups still waiting for their missing sibling(s) after maxAge seconds:
+        rather than silently losing the content already received, the available parts are assembled with an
+        explicit '⟦...N/total...⟧' marker inserted at each missing part's position """
+        now = time.monotonic()
+        with self._smsPartsLock:
+            staleGroups = []
+            for key, lastSeen in list(self._smsPartsLastSeen.items()):
+                if now - lastSeen > maxAge:
+                    staleGroups.append(self._smsParts.pop(key))
+                    del self._smsPartsLastSeen[key]
+        for partsByNumber in staleGroups:
+            fullSms = partsByNumber[min(partsByNumber)]
+            totalParts = fullSms.concat.parts
+            self.log.warning('Delivering incomplete concatenated SMS from %s (ref %s): only %d/%d part(s) received after %ds',
+                              fullSms.number, fullSms.concat.reference, len(partsByNumber), totalParts, maxAge)
+            fullSms.text = ''.join(
+                partsByNumber[i].text if i in partsByNumber else f'⟦...{i}/{totalParts}...⟧'
+                for i in range(1, totalParts + 1)
+            )
+            fullSms.concat = None
+            self.smsReceivedCallback(fullSms)
 
     def _getConcat(self, smsDict):
         concat = None
@@ -1468,7 +1496,7 @@ class GsmModem(SerialComms):
                 msgIndex = cmtiMatch.group(2)
                 sms = self.readStoredSms(msgIndex, msgMemory)
                 try:
-                    self.smsReceivedCallback(sms)
+                    self._deliverOrBufferSms(sms)
                 except Exception:
                     self.log.error('error in smsReceivedCallback', exc_info=True)
                 else:

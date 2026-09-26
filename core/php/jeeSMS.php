@@ -90,11 +90,7 @@ if (isset($result['number']) && $result['number'] == 'modem_status' && isset($re
 }
 
 if (isset($result['number']) && $result['number'] == 'delivery_report' && isset($result['destination']) && isset($result['status'])) {
-	$destination = $result['destination'];
-	if (strlen($destination) == 11) {
-		$destination = '+' . $destination;
-	}
-	$formattedDestination = '0' . substr($destination, 3);
+	[$destination, $formattedDestination] = formatSmsNumber($result['destination']);
 	$label = ($result['status'] == 'delivered') ? __('Livré', __FILE__) : __('Échec', __FILE__);
 	$statusText = $label . ' : ' . $destination . ' (' . date('d/m/Y H:i:s') . ')';
 	$success = ($result['status'] == 'delivered') ? 1 : 0;
@@ -111,6 +107,7 @@ if (isset($result['number']) && $result['number'] == 'delivery_report' && isset(
 			$found = true;
 			$eqLogic->checkAndUpdateCmd('delivery_status_' . $cmd->getId(), $statusText);
 			$eqLogic->checkAndUpdateCmd('delivery_success_' . $cmd->getId(), $success);
+			log::add('sms', 'info', __('Accusé de réception reçu : ', __FILE__) . secureXSS($statusText));
 		}
 	}
 	if (!$found) {
@@ -122,6 +119,7 @@ if (isset($result['number']) && $result['number'] == 'delivery_report' && isset(
 				$eqLogic->checkAndUpdateCmd('delivery_status_' . $customNumberCmd->getId(), $statusText);
 				$eqLogic->checkAndUpdateCmd('delivery_success_' . $customNumberCmd->getId(), $success);
 				$found = true;
+				log::add('sms', 'info', __('Accusé de réception reçu : ', __FILE__) . secureXSS($statusText));
 				break;
 			}
 		}
@@ -148,23 +146,11 @@ if (isset($result['devices'])) {
 	foreach ($result['devices'] as $key => $datas) {
 		$message = trim($datas['message']);
 		$number = $datas['number'];
-		if (strlen($number) < 10) {
-			continue;
-		}
+		// Le seul payload 'none' (erreur démon) arrive toujours en top-level, jamais imbriqué sous 'devices' (voir plus haut)
 		if ($message == '' || $number == '') {
 			continue;
 		}
-		if ($number == 'none') {
-			message::add('sms', 'Error : ' . $message, '', 'smscmderror');
-			if (strpos($message, 'PIN') !== false) {
-				config::save('allowStartDeamon', 0, 'sms');
-			}
-			continue;
-		}
-		if (strlen($number) == 11) {
-			$number = '+' . $number;
-		}
-		$formattedPhoneNumber = '0' . substr($number, 3);
+		[$number, $formattedPhoneNumber] = formatSmsNumber($number);
 		$reply = '';
 		$smsOk = false;
 		foreach ($eqLogics as $eqLogic) {
@@ -208,6 +194,29 @@ if (isset($result['devices'])) {
 			log::add('sms', 'info', __('Message venant d\'un numéro non autorisé : ', __FILE__) . secureXSS($number) . ' (' . secureXSS($formattedPhoneNumber) . ') : ' . secureXSS($message));
 		}
 	}
+}
+
+/**
+ * Convertit un numéro reçu du démon vers ses deux formats de matching (international +33... et national 0...),
+ * pour comparer avec le champ "phonenumber" d'une commande quel que soit le format saisi par l'utilisateur.
+ * Reconnaît uniquement les formes réelles d'un numéro français (+33/0033/national 0) via des regex ancrées.
+ * Toute autre entrée (sender ID alphanumérique, numéro étranger, short code...) est renvoyée inchangée des
+ * deux côtés : il n'existe pas de forme alternative pertinente, et on évite ainsi toute conversion hasardeuse.
+ *
+ * @param string $number
+ * @return array{0: string, 1: string}
+ */
+function formatSmsNumber($number) {
+	if (preg_match('/^\+33([0-9]{9})$/', $number, $matches) === 1) {
+		return array($number, '0' . $matches[1]);
+	}
+	if (preg_match('/^(?:00)?33([0-9]{9})$/', $number, $matches) === 1) {
+		return array('+33' . $matches[1], '0' . $matches[1]);
+	}
+	if (preg_match('/^0([0-9]{9})$/', $number) === 1) {
+		return array('+33' . substr($number, 1), $number);
+	}
+	return array($number, $number);
 }
 
 /**

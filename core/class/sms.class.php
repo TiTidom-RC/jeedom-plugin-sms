@@ -75,6 +75,7 @@ class sms extends eqLogic {
 		$cmd .= ' --reconnectbasedelay ' . config::byKey('reconnect_base_delay', 'sms', 5);
 		$cmd .= ' --reconnectmaxdelay ' . config::byKey('reconnect_max_delay', 'sms', 300);
 		$cmd .= ' --reconnectmaxattempts ' . config::byKey('reconnect_max_attempts', 'sms', 10);
+		$cmd .= ' --concatpartsttl ' . config::byKey('concat_parts_ttl', 'sms', 300);
 		$cmd .= ' --callback ' . network::getNetworkAccess('internal', 'http:127.0.0.1:port:comp') . '/plugins/sms/core/php/jeeSMS.php';
 		$cmd .= ' --apikey ' . jeedom::getApiKey('sms');
 		$cmd .= ' --pid ' . jeedom::getTmpFolder('sms') . '/deamon.pid';

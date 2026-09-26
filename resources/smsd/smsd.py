@@ -21,6 +21,7 @@ import argparse
 import signal
 import traceback
 import json
+from itertools import count
 from typing import Optional
 from gsmmodem.exceptions import TimeoutException
 from gsmmodem.modem import GsmModem, StatusReport
@@ -39,6 +40,7 @@ except ImportError as e:
 # PARAMETERS #
 
 gsm: Optional[GsmModem] = None
+_smsSeq = count()  # compteur thread-safe (CPython) pour différencier les clés du buffer devices:: entre 2 flush
 
 
 def handleSms(sms):
@@ -49,7 +51,9 @@ def handleSms(sms):
     message = sms.text.replace('"', '')
     # message = jeedom_utils.remove_accents(sms.text.replace('"', ''))
     if j_com_instance:
-        j_com_instance.add_changes('devices::' + str(sms.number), {'number': sms.number, 'message': message})
+        # Clé unique par message (pas juste le numéro) : sinon 2 SMS du même expéditeur avant le prochain
+        # flush s'écrasent dans le buffer (merge_dict remplace la valeur précédente sur la même clé)
+        j_com_instance.add_changes(f'devices::{sms.number}#{next(_smsSeq)}', {'number': sms.number, 'message': message})
 
 
 def handleStatusReport(report):
@@ -207,6 +211,7 @@ def listen():
                     consecutive_network_failures = 0
                     _setModemStatus('connected')
                     gsm.processStoredSms(True)
+                    gsm.purgeStaleSmsParts(_concat_parts_ttl)
             except Exception as e:
                 if _isTransientNetworkError(e):
                     consecutive_network_failures += 1
@@ -292,6 +297,7 @@ _delivery_report = 'no'
 _reconnect_base_delay = 5.0
 _reconnect_max_delay = 300.0
 _reconnect_max_attempts = 10
+_concat_parts_ttl = 300.0
 
 
 parser = argparse.ArgumentParser(description='SMS Daemon for Jeedom plugin')
@@ -310,6 +316,7 @@ parser.add_argument("--deliveryreport", help="Request SMS delivery status report
 parser.add_argument("--reconnectbasedelay", help="Base delay (s) before first reconnect attempt", type=str)
 parser.add_argument("--reconnectmaxdelay", help="Max delay (s) between reconnect attempts", type=str)
 parser.add_argument("--reconnectmaxattempts", help="Max number of reconnect attempts before giving up", type=str)
+parser.add_argument("--concatpartsttl", help="Max age (s) of incomplete concatenated SMS parts before they are discarded", type=str)
 parser.add_argument("--pid", help="Pid file", type=str)
 args = parser.parse_args()
 
@@ -343,6 +350,8 @@ if args.reconnectmaxdelay:
     _reconnect_max_delay = float(args.reconnectmaxdelay)
 if args.reconnectmaxattempts:
     _reconnect_max_attempts = int(args.reconnectmaxattempts)
+if args.concatpartsttl:
+    _concat_parts_ttl = float(args.concatpartsttl)
 if args.pid:
     _pidfile = args.pid
 
@@ -368,6 +377,7 @@ logging.info('Delivery report : %s', _delivery_report)
 logging.info('Reconnect base delay : %s', _reconnect_base_delay)
 logging.info('Reconnect max delay : %s', _reconnect_max_delay)
 logging.info('Reconnect max attempts : %s', _reconnect_max_attempts)
+logging.info('Concat parts TTL : %s', _concat_parts_ttl)
 
 
 if _device == 'auto':

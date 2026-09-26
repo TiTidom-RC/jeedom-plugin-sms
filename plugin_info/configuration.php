@@ -108,6 +108,12 @@ if (!isConnect('admin')) {
                 <input class="configKey form-control" data-l1key="cycle" />
             </div>
         </div>
+        <div class="form-group">
+            <label class="col-sm-5 control-label">{{Délai d'expiration des fragments SMS incomplets (s)}}</label>
+            <div class="col-sm-5">
+                <input class="configKey form-control" data-l1key="concat_parts_ttl" title="{{Si un SMS multi-parties (message long) n'est jamais reçu en entier, les fragments déjà reçus sont délivrés tels quels après ce délai, avec un marqueur aux emplacements manquants}}" />
+            </div>
+        </div>
         <legend>{{Reconnexion automatique en cas de perte du modem}}</legend>
         <div class="form-group">
             <label class="col-sm-5 control-label">{{Délai avant la première tentative (s)}}</label>
