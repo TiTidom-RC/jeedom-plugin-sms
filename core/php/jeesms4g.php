@@ -17,7 +17,7 @@
  */
 require_once dirname(__FILE__) . "/../../../../core/php/core.inc.php";
 
-if (!jeedom::apiAccess(init('apikey'), 'sms')) {
+if (!jeedom::apiAccess(init('apikey'), 'sms4g')) {
 	echo __('Vous n\'êtes pas autorisé à effectuer cette action', __FILE__);
 	die();
 }
@@ -31,8 +31,8 @@ if (!is_array($result)) {
 }
 
 if (isset($result['number']) && $result['number'] == 'signal_strength' && isset($result['message'])) {
-	config::save('signal_strength', $result['message'], 'sms');
-	foreach (eqLogic::byType('sms') as $eqLogic) {
+	config::save('signal_strength', $result['message'], 'sms4g');
+	foreach (eqLogic::byType('sms4g') as $eqLogic) {
 		$cmd = $eqLogic->getCmd(null, 'signal');
 		if (is_object($cmd)) {
 			$cmd->event($result['message']);
@@ -42,7 +42,7 @@ if (isset($result['number']) && $result['number'] == 'signal_strength' && isset(
 }
 
 if (isset($result['number']) && $result['number'] == 'network_name' && isset($result['message'])) {
-	config::save('network_name', $result['message'], 'sms');
+	config::save('network_name', $result['message'], 'sms4g');
 	die();
 }
 
@@ -79,7 +79,7 @@ if (isset($result['number']) && $result['number'] == 'modem_status' && isset($re
 		default:
 			$message = $result['status'];
 	}
-	foreach (eqLogic::byType('sms') as $eqLogic) {
+	foreach (eqLogic::byType('sms4g') as $eqLogic) {
 		$eqLogic->checkAndUpdateCmd('connection', $message);
 		if ($connectionState !== null && $online !== null) {
 			$eqLogic->checkAndUpdateCmd('connection_state', $connectionState);
@@ -95,7 +95,7 @@ if (isset($result['number']) && $result['number'] == 'delivery_report' && isset(
 	$statusText = $label . ' : ' . $destination . ' (' . date('d/m/Y H:i:s') . ')';
 	$success = ($result['status'] == 'delivered') ? 1 : 0;
 	$found = false;
-	foreach (eqLogic::byType('sms', true) as $eqLogic) {
+	foreach (eqLogic::byType('sms4g', true) as $eqLogic) {
 		/** @var cmd $cmd */
 		foreach ($eqLogic->getCmd('action') as $cmd) {
 			if ($cmd->getSubType() != 'message' || $cmd->getLogicalId() == 'send_to_custom_number') {
@@ -107,39 +107,39 @@ if (isset($result['number']) && $result['number'] == 'delivery_report' && isset(
 			$found = true;
 			$eqLogic->checkAndUpdateCmd('delivery_status_' . $cmd->getId(), $statusText);
 			$eqLogic->checkAndUpdateCmd('delivery_success_' . $cmd->getId(), $success);
-			log::add('sms', 'info', __('Accusé de réception reçu : ', __FILE__) . secureXSS($statusText));
+			log::add('sms4g', 'info', __('Accusé de réception reçu : ', __FILE__) . secureXSS($statusText));
 		}
 	}
 	if (!$found) {
 		// Numéro ne correspondant à aucun contact connu : le message a forcément été envoyé
 		// via la commande "Envoyer message à" (numéro personnalisé), on y route l'accusé
-		foreach (eqLogic::byType('sms', true) as $eqLogic) {
+		foreach (eqLogic::byType('sms4g', true) as $eqLogic) {
 			$customNumberCmd = $eqLogic->getCmd(null, 'send_to_custom_number');
 			if (is_object($customNumberCmd)) {
 				$eqLogic->checkAndUpdateCmd('delivery_status_' . $customNumberCmd->getId(), $statusText);
 				$eqLogic->checkAndUpdateCmd('delivery_success_' . $customNumberCmd->getId(), $success);
 				$found = true;
-				log::add('sms', 'info', __('Accusé de réception reçu : ', __FILE__) . secureXSS($statusText));
+				log::add('sms4g', 'info', __('Accusé de réception reçu : ', __FILE__) . secureXSS($statusText));
 				break;
 			}
 		}
 	}
 	if (!$found) {
-		log::add('sms', 'info', __('Accusé de réception reçu pour un numéro non reconnu : ', __FILE__) . secureXSS($destination));
+		log::add('sms4g', 'info', __('Accusé de réception reçu pour un numéro non reconnu : ', __FILE__) . secureXSS($destination));
 	}
 	die();
 }
 
 if (isset($result['number']) && $result['number'] == 'none' && isset($result['message'])) {
-	message::add('sms', 'Error : ' . $result['message'], '', 'smscmderror');
+	message::add('sms4g', 'Error : ' . $result['message'], '', 'sms4gcmderror');
 	if (strpos($result['message'], 'PIN') !== false) {
-		config::save('deamonAutoMode', 0, 'sms');
+		config::save('deamonAutoMode', 0, 'sms4g');
 	}
 }
-/** @var array<sms> */
-$eqLogics = eqLogic::byType('sms', true);
+/** @var array<sms4g> */
+$eqLogics = eqLogic::byType('sms4g', true);
 if (count($eqLogics) < 1) {
-	log::add('sms', 'debug', __("Aucun équipement SMS activé", __FILE__));
+	log::add('sms4g', 'debug', __("Aucun équipement SMS activé", __FILE__));
 	die();
 }
 if (isset($result['devices'])) {
@@ -160,7 +160,7 @@ if (isset($result['devices'])) {
 					continue;
 				}
 				$smsOk = true;
-				log::add('sms', 'info', __('Message venant de ', __FILE__) . $formattedPhoneNumber . ' : ' . $message);
+				log::add('sms4g', 'info', __('Message venant de ', __FILE__) . $formattedPhoneNumber . ' : ' . $message);
 				if ($cmd->askResponse($message)) {
 					continue (3);
 				}
@@ -170,8 +170,8 @@ if (isset($result['devices'])) {
 			if (!$smsOk) {
 				if ($eqLogic->getConfiguration('allowUnknownOrigin', 0) == 1) {
 					if ($eqLogic->getConfiguration('autoAddNewNumber', 0) == 1) {
-						log::add('sms', 'info', __('Message venant d\'un numéro inconnu, création auto activée:', __FILE__) . secureXSS($number) . ' (' . secureXSS($formattedPhoneNumber) . ') : ' . secureXSS($message));
-						$new_number = new smsCmd();
+						log::add('sms4g', 'info', __('Message venant d\'un numéro inconnu, création auto activée:', __FILE__) . secureXSS($number) . ' (' . secureXSS($formattedPhoneNumber) . ') : ' . secureXSS($message));
+						$new_number = new sms4gCmd();
 						$new_number->setType('action');
 						$new_number->setSubType('message');
 						$new_number->setEqLogic_id($eqLogic->getId());
@@ -181,7 +181,7 @@ if (isset($result['devices'])) {
 
 						handleMessage($new_number, $number, $message);
 					} else {
-						log::add('sms', 'info', __('Message venant d\'un numéro inconnu mais les numéros inconnus sont autorisés : ', __FILE__) . secureXSS($number) . ' (' . secureXSS($formattedPhoneNumber) . ') : ' . secureXSS($message));
+						log::add('sms4g', 'info', __('Message venant d\'un numéro inconnu mais les numéros inconnus sont autorisés : ', __FILE__) . secureXSS($number) . ' (' . secureXSS($formattedPhoneNumber) . ') : ' . secureXSS($message));
 						$eqLogic->checkAndUpdateCmd('sms', $message);
 						$eqLogic->checkAndUpdateCmd('sender', $number);
 					}
@@ -191,7 +191,7 @@ if (isset($result['devices'])) {
 		}
 
 		if (!$smsOk) {
-			log::add('sms', 'info', __('Message venant d\'un numéro non autorisé : ', __FILE__) . secureXSS($number) . ' (' . secureXSS($formattedPhoneNumber) . ') : ' . secureXSS($message));
+			log::add('sms4g', 'info', __('Message venant d\'un numéro non autorisé : ', __FILE__) . secureXSS($number) . ' (' . secureXSS($formattedPhoneNumber) . ') : ' . secureXSS($message));
 		}
 	}
 }
@@ -220,9 +220,9 @@ function formatSmsNumber($number) {
 }
 
 /**
- * Handle sms message when smsCmd has been found. It will check for interaction and then update 'sms' & 'sender' cmd on the eqLogic
+ * Handle sms message when sms4gCmd has been found. It will check for interaction and then update 'sms' & 'sender' cmd on the eqLogic
  *
- * @param smsCmd $cmd
+ * @param sms4gCmd $cmd
  * @param string $number
  * @param string $message
  * @return void
@@ -231,7 +231,7 @@ function handleMessage($cmd, $number, $message) {
 	/** @var eqLogic */
 	$eqLogic = $cmd->getEqLogic();
 	if ($eqLogic->getConfiguration('disableInteract', '0') == '0') {
-		$params = array('plugin' => 'sms');
+		$params = array('plugin' => 'sms4g');
 		if ($cmd->getConfiguration('user') != '') {
 			$user = user::byId($cmd->getConfiguration('user'));
 			if (is_object($user)) {
@@ -242,10 +242,10 @@ function handleMessage($cmd, $number, $message) {
 		$reply = interactQuery::tryToReply($message, $params);
 		if (trim($reply['reply']) != '') {
 			$cmd->execute(array('title' => $reply['reply'], 'message' => '', 'number' => $number));
-			log::add('sms', 'info', __("\nRéponse : ", __FILE__) . $reply['reply']);
+			log::add('sms4g', 'info', __("\nRéponse : ", __FILE__) . $reply['reply']);
 		}
 	} else {
-		log::add('sms', 'debug', __("Interaction désactivée.", __FILE__));
+		log::add('sms4g', 'debug', __("Interaction désactivée.", __FILE__));
 	}
 	$eqLogic->checkAndUpdateCmd('sms', $message);
 	$eqLogic->checkAndUpdateCmd('sender', $cmd->getName());

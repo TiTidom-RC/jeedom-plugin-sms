@@ -18,16 +18,188 @@
 
 /* * ***************************Includes********************************* */
 
-class sms extends eqLogic {
+class sms4g extends eqLogic {
 	/*     * ***********************Méthode static*************************** */
+
+	const PYTHON3_PATH = __DIR__ . '/../../resources/venv/bin/python3';
+	const PYENV_PATH = '/opt/pyenv/bin/pyenv';
 
 	public static $_encryptConfigKey = array('pin');
 
+	public static function backupExclude() {
+		return [
+			'resources/venv'
+		];
+	}
+
+	public static function getPluginVersion() {
+		$pluginVersion = '0.0.0';
+		$infoFile = dirname(__FILE__) . '/../../plugin_info/info.json';
+		if (!file_exists($infoFile)) {
+			log::add('sms4g', 'warning', '[Plugin-Version] fichier info.json manquant');
+			return $pluginVersion;
+		}
+		$data = json_decode(file_get_contents($infoFile), true);
+		if (is_array($data) && isset($data['pluginVersion'])) {
+			$pluginVersion = $data['pluginVersion'];
+		}
+		return $pluginVersion;
+	}
+
+	public static function getPythonVersion() {
+		$pythonVersion = '0.0.0';
+		try {
+			if (file_exists(self::PYTHON3_PATH)) {
+				$pythonVersion = exec(system::getCmdSudo() . self::PYTHON3_PATH . " --version 2>&1 | awk '{ print $2 }'");
+				config::save('pythonVersion', $pythonVersion, 'sms4g');
+			} else {
+				log::add('sms4g', 'error', '[Python-Version] Python File :: KO');
+			}
+		} catch (\Exception $e) {
+			log::add('sms4g', 'error', '[Python-Version] Erreur : ' . $e->getMessage());
+		}
+		log::add('sms4g', 'info', '[Python-Version] PythonVersion :: ' . $pythonVersion);
+		return $pythonVersion;
+	}
+
+	public static function getPyEnvVersion() {
+		$pyenvVersion = '0.0.0';
+		try {
+			if (file_exists(self::PYENV_PATH)) {
+				$pyenvVersion = exec(system::getCmdSudo() . self::PYENV_PATH . " --version | awk '{ print $2 }'");
+				config::save('pyenvVersion', $pyenvVersion, 'sms4g');
+			} elseif (file_exists(self::PYTHON3_PATH)) {
+				$pythonPyEnvInUse = (exec(system::getCmdSudo() . 'dirname $(readlink ' . self::PYTHON3_PATH . ') | grep -Ewc "opt/pyenv"') == 1) ? true : false;
+				if (!$pythonPyEnvInUse) {
+					$pyenvVersion = "-";
+					config::save('pyenvVersion', $pyenvVersion, 'sms4g');
+				}
+			} else {
+				log::add('sms4g', 'error', '[PyEnv-Version] PyEnv File :: KO');
+			}
+		} catch (\Exception $e) {
+			log::add('sms4g', 'error', '[PyEnv-Version] Erreur : ' . $e->getMessage());
+		}
+		log::add('sms4g', 'info', '[PyEnv-Version] PyEnvVersion :: ' . $pyenvVersion);
+		return $pyenvVersion;
+	}
+
+	public static function getPythonDepFromRequirements() {
+		$pythonDepString = '';
+		$pythonDepNum = 0;
+		try {
+			if (!file_exists(dirname(__FILE__) . '/../../resources/requirements.txt')) {
+				log::add('sms4g', 'error', '[Python-Dep] Fichier requirements.txt manquant');
+				config::save('pythonDepString', $pythonDepString, 'sms4g');
+				config::save('pythonDepNum', $pythonDepNum, 'sms4g');
+				return false;
+			}
+			$data = file_get_contents(dirname(__FILE__) . '/../../resources/requirements.txt');
+			if (!is_string($data)) {
+				log::add('sms4g', 'error', '[Python-Dep] Impossible de lire le fichier requirements.txt');
+				config::save('pythonDepString', $pythonDepString, 'sms4g');
+				config::save('pythonDepNum', $pythonDepNum, 'sms4g');
+				return false;
+			}
+			$lines = explode("\n", $data);
+			$packages = array();
+			foreach ($lines as $line) {
+				$line = trim($line);
+				if ($line === '' || strpos($line, '#') === 0) {
+					continue; // Ignore les lignes vides et les commentaires
+				}
+				// Retire les extras [async], [dev], etc.
+				$line = preg_replace('/\[[^\]]*\]/', '', $line);
+				// Normalise le nom du package pour regex : remplace - ou _ par [-_] (pour supporter les incohérences pip)
+				if (preg_match('/^([a-zA-Z0-9_-]+)(.*)$/', $line, $matches)) {
+					$packageName = preg_replace('/[-_]/', '[-_]', $matches[1]);
+					$versionPart = $matches[2]; // ==0.4.4, >=1.0, etc.
+					$packages[] = $packageName . $versionPart;
+				}
+			}
+			$packages = array_unique($packages);
+			$pythonDepString = join("|", $packages);
+			$pythonDepNum = count($packages);
+
+			if (config::byKey('pythonDepString', 'sms4g') != $pythonDepString) {
+				config::save('pythonDepString', $pythonDepString, 'sms4g');
+			}
+			if (config::byKey('pythonDepNum', 'sms4g') != $pythonDepNum) {
+				config::save('pythonDepNum', $pythonDepNum, 'sms4g');
+			}
+		} catch (\Exception $e) {
+			log::add('sms4g', 'debug', '[Python-Dep] Get requirements.txt ERROR :: ' . $e->getMessage());
+			return false;
+		}
+		log::add('sms4g', 'debug', '[Python-Dep] Validated dependencies regex : ' . $pythonDepString . " / Expected packages count : " . $pythonDepNum);
+
+		return true;
+	}
+
+	public static function dependancy_install() {
+		log::remove(__CLASS__ . '_update');
+
+		$script_sysUpdates = 0;
+		$script_restorePyEnv = 0;
+		$script_restoreVenv = 0;
+
+		if (config::byKey('debugInstallUpdates', 'sms4g') === '1') {
+			$script_sysUpdates = 1;
+			config::save('debugInstallUpdates', '0', 'sms4g');
+		}
+		if (config::byKey('debugRestorePyEnv', 'sms4g') === '1') {
+			$script_restorePyEnv = 1;
+			config::save('debugRestorePyEnv', '0', 'sms4g');
+		}
+		if (config::byKey('debugRestoreVenv', 'sms4g') === '1') {
+			$script_restoreVenv = 1;
+			config::save('debugRestoreVenv', '0', 'sms4g');
+		}
+
+		return array('script' => __DIR__ . '/../../resources/install_#stype#.sh ' . jeedom::getTmpFolder(__CLASS__) . '/dependency' . ' ' . $script_sysUpdates . ' ' . $script_restorePyEnv . ' ' . $script_restoreVenv, 'log' => log::getPathToLog(__CLASS__ . '_update'));
+	}
+
+	public static function dependancy_info() {
+		$return = array();
+		$return['log'] = log::getPathToLog(__CLASS__ . '_update');
+		$return['progress_file'] = jeedom::getTmpFolder(__CLASS__) . '/dependency';
+
+		if (file_exists(jeedom::getTmpFolder(__CLASS__) . '/dependency')) {
+			$return['state'] = 'in_progress';
+		} else {
+			if (exec(system::getCmdSudo() . system::get('cmd_check') . '-Ec "python3\-requests|python3\-setuptools|python3\-dev|python3\-venv"') < 4) {
+				$return['state'] = 'nok';
+				log::add(__CLASS__, 'debug', '[Python-Dep] System packages missing (python3-requests, python3-setuptools, python3-dev, or python3-venv)');
+			} elseif (!file_exists(self::PYTHON3_PATH)) {
+				$return['state'] = 'nok';
+				log::add(__CLASS__, 'debug', '[Python-Dep] Python venv executable not found at: ' . self::PYTHON3_PATH);
+			} else {
+				$expectedCount = config::byKey('pythonDepNum', 'sms4g', 0, true);
+				$pythonDepString = config::byKey('pythonDepString', 'sms4g', '', true);
+
+				$cmd = self::PYTHON3_PATH . ' -m pip --no-cache-dir freeze | grep -Ewci "' . $pythonDepString . '"';
+				$foundCount = exec($cmd);
+
+				if ($foundCount < $expectedCount) {
+					$return['state'] = 'nok';
+					log::add(__CLASS__, 'debug', '[Python-Dep] Missing Dependencies. Found: ' . $foundCount . ' / Expected: ' . $expectedCount);
+					log::add(__CLASS__, 'debug', '[Python-Dep] Regex used: ' . $pythonDepString);
+					$pipFreeze = shell_exec(self::PYTHON3_PATH . ' -m pip --no-cache-dir freeze');
+					log::add(__CLASS__, 'debug', '[Python-Dep] Pip Freeze Output: ' . str_replace(PHP_EOL, ' | ', trim($pipFreeze)));
+				} else {
+					$return['state'] = 'ok';
+					log::add(__CLASS__, 'debug', '[Python-Dep] Dependencies installed. State : OK');
+				}
+			}
+		}
+		return $return;
+	}
+
 	public static function deamon_info() {
 		$return = array();
-		$return['log'] = 'sms';
+		$return['log'] = 'sms4g';
 		$return['state'] = 'nok';
-		$pid_file = jeedom::getTmpFolder('sms') . '/deamon.pid';
+		$pid_file = jeedom::getTmpFolder('sms4g') . '/deamon.pid';
 		if (file_exists($pid_file)) {
 			if (@posix_getsid(trim(file_get_contents($pid_file)))) {
 				$return['state'] = 'ok';
@@ -36,7 +208,7 @@ class sms extends eqLogic {
 			}
 		}
 		$return['launchable'] = 'ok';
-		$port = config::byKey('port', 'sms');
+		$port = config::byKey('port', 'sms4g');
 		if ($port != 'auto') {
 			$port = jeedom::getUsbMapping($port);
 			if (is_string($port)) {
@@ -52,35 +224,36 @@ class sms extends eqLogic {
 
 	public static function deamon_start() {
 		self::deamon_stop();
+		self::getPythonVersion();
 		$deamon_info = self::deamon_info();
 		if ($deamon_info['launchable'] != 'ok') {
 			throw new Exception(__('Veuillez vérifier la configuration', __FILE__));
 		}
-		$port = config::byKey('port', 'sms');
+		$port = config::byKey('port', 'sms4g');
 		if ($port != 'auto') {
 			$port = jeedom::getUsbMapping($port);
 		}
-		$sms_path = realpath(__DIR__ . '/../../resources/smsd');
-		$cmd = system::getCmdPython3(__CLASS__) . " {$sms_path}/smsd.py";
+		$sms_path = realpath(__DIR__ . '/../../resources/sms4gd');
+		$cmd = self::PYTHON3_PATH . " {$sms_path}/sms4gd.py";
 		$cmd .= ' --device ' . $port;
-		$cmd .= ' --loglevel ' . log::convertLogLevel(log::getLogLevel('sms'));
-		$cmd .= ' --socketport ' . config::byKey('socketport', 'sms');
-		$cmd .= ' --serialrate ' . config::byKey('serial_rate', 'sms');
-		$cmd .= ' --pin ' . config::byKey('pin', 'sms', 'None');
-		$cmd .= ' --textmode ' . ((config::byKey('text_mode', 'sms') == 1) ? 'yes' : 'no');
-		$cmd .= ' --smsc ' . config::byKey('smsc', 'sms', 'None');
-		$cmd .= ' --force4g ' . ((config::byKey('force_4g_only', 'sms') == 1) ? 'yes' : 'no');
-		$cmd .= ' --cycle ' . config::byKey('cycle', 'sms');
-		$cmd .= ' --deliveryreport ' . ((config::byKey('delivery_report', 'sms', 0) == 1) ? 'yes' : 'no');
-		$cmd .= ' --reconnectbasedelay ' . config::byKey('reconnect_base_delay', 'sms', 5);
-		$cmd .= ' --reconnectmaxdelay ' . config::byKey('reconnect_max_delay', 'sms', 300);
-		$cmd .= ' --reconnectmaxattempts ' . config::byKey('reconnect_max_attempts', 'sms', 10);
-		$cmd .= ' --concatpartsttl ' . config::byKey('concat_parts_ttl', 'sms', 300);
-		$cmd .= ' --callback ' . network::getNetworkAccess('internal', 'http:127.0.0.1:port:comp') . '/plugins/sms/core/php/jeeSMS.php';
-		$cmd .= ' --apikey ' . jeedom::getApiKey('sms');
-		$cmd .= ' --pid ' . jeedom::getTmpFolder('sms') . '/deamon.pid';
-		log::add('sms', 'info', 'Lancement démon sms : ' . $cmd);
-		$result = exec($cmd . ' >> ' . log::getPathToLog('smsd') . ' 2>&1 &');
+		$cmd .= ' --loglevel ' . log::convertLogLevel(log::getLogLevel('sms4g'));
+		$cmd .= ' --socketport ' . config::byKey('socketport', 'sms4g');
+		$cmd .= ' --serialrate ' . config::byKey('serial_rate', 'sms4g');
+		$cmd .= ' --pin ' . config::byKey('pin', 'sms4g', 'None');
+		$cmd .= ' --textmode ' . ((config::byKey('text_mode', 'sms4g') == 1) ? 'yes' : 'no');
+		$cmd .= ' --smsc ' . config::byKey('smsc', 'sms4g', 'None');
+		$cmd .= ' --force4g ' . ((config::byKey('force_4g_only', 'sms4g') == 1) ? 'yes' : 'no');
+		$cmd .= ' --cycle ' . config::byKey('cycle', 'sms4g');
+		$cmd .= ' --deliveryreport ' . ((config::byKey('delivery_report', 'sms4g', 0) == 1) ? 'yes' : 'no');
+		$cmd .= ' --reconnectbasedelay ' . config::byKey('reconnect_base_delay', 'sms4g', 5);
+		$cmd .= ' --reconnectmaxdelay ' . config::byKey('reconnect_max_delay', 'sms4g', 300);
+		$cmd .= ' --reconnectmaxattempts ' . config::byKey('reconnect_max_attempts', 'sms4g', 10);
+		$cmd .= ' --concatpartsttl ' . config::byKey('concat_parts_ttl', 'sms4g', 300);
+		$cmd .= ' --callback ' . network::getNetworkAccess('internal', 'http:127.0.0.1:port:comp') . '/plugins/sms4g/core/php/jeesms4g.php';
+		$cmd .= ' --apikey ' . jeedom::getApiKey('sms4g');
+		$cmd .= ' --pid ' . jeedom::getTmpFolder('sms4g') . '/deamon.pid';
+		log::add('sms4g', 'info', 'Lancement démon sms4g : ' . $cmd);
+		$result = exec($cmd . ' >> ' . log::getPathToLog('sms4gd') . ' 2>&1 &');
 		$i = 0;
 		while ($i < 30) {
 			$deamon_info = self::deamon_info();
@@ -91,15 +264,15 @@ class sms extends eqLogic {
 			$i++;
 		}
 		if ($i >= 30) {
-			log::add('sms', 'error', 'Impossible de lancer le démon sms, vérifiez le port', 'unableStartDeamon');
+			log::add('sms4g', 'error', 'Impossible de lancer le démon sms4g, vérifiez le port', 'unableStartDeamon');
 			return false;
 		}
-		message::removeAll('sms', 'unableStartDeamon');
+		message::removeAll('sms4g', 'unableStartDeamon');
 		return true;
 	}
 
 	public static function deamon_stop() {
-		$pid_file = jeedom::getTmpFolder('sms') . '/deamon.pid';
+		$pid_file = jeedom::getTmpFolder('sms4g') . '/deamon.pid';
 		if (file_exists($pid_file)) {
 			$pid = intval(trim(file_get_contents($pid_file)));
 			if ($pid > 0) {
@@ -110,9 +283,9 @@ class sms extends eqLogic {
 			}
 			@unlink($pid_file);
 		}
-		system::kill('smsd.py'); // SIGKILL de sécurité si zombie
-		system::fuserk(config::byKey('socketport', 'sms'));
-		$port = config::byKey('port', 'sms');
+		system::kill('sms4gd.py'); // SIGKILL de sécurité si zombie
+		system::fuserk(config::byKey('socketport', 'sms4g'));
+		$port = config::byKey('port', 'sms4g');
 		if ($port != 'auto') {
 			system::fuserk(jeedom::getUsbMapping($port));
 		}
@@ -128,7 +301,7 @@ class sms extends eqLogic {
 	public function postSave() {
 		$signal = $this->getCmd(null, 'signal');
 		if (!is_object($signal)) {
-			$signal = new smsCmd();
+			$signal = new sms4gCmd();
 			$signal->setEqLogic_id($this->getId());
 			$signal->setLogicalId('signal');
 			$signal->setIsVisible(0);
@@ -142,7 +315,7 @@ class sms extends eqLogic {
 
 		$connection = $this->getCmd(null, 'connection');
 		if (!is_object($connection)) {
-			$connection = new smsCmd();
+			$connection = new sms4gCmd();
 			$connection->setEqLogic_id($this->getId());
 			$connection->setLogicalId('connection');
 			$connection->setIsVisible(0);
@@ -158,7 +331,7 @@ class sms extends eqLogic {
 
 		$connectionState = $this->getCmd(null, 'connection_state');
 		if (!is_object($connectionState)) {
-			$connectionState = new smsCmd();
+			$connectionState = new sms4gCmd();
 			$connectionState->setEqLogic_id($this->getId());
 			$connectionState->setLogicalId('connection_state');
 			$connectionState->setIsVisible(0);
@@ -174,7 +347,7 @@ class sms extends eqLogic {
 
 		$online = $this->getCmd(null, 'online');
 		if (!is_object($online)) {
-			$online = new smsCmd();
+			$online = new sms4gCmd();
 			$online->setEqLogic_id($this->getId());
 			$online->setLogicalId('online');
 			$online->setIsVisible(0);
@@ -188,7 +361,7 @@ class sms extends eqLogic {
 
 		$sms = $this->getCmd(null, 'sms');
 		if (!is_object($sms)) {
-			$sms = new smsCmd();
+			$sms = new sms4gCmd();
 			$sms->setEqLogic_id($this->getId());
 			$sms->setLogicalId('sms');
 			$sms->setIsVisible(0);
@@ -204,7 +377,7 @@ class sms extends eqLogic {
 
 		$sender = $this->getCmd(null, 'sender');
 		if (!is_object($sender)) {
-			$sender = new smsCmd();
+			$sender = new sms4gCmd();
 			$sender->setEqLogic_id($this->getId());
 			$sender->setLogicalId('sender');
 			$sender->setIsVisible(0);
@@ -220,7 +393,7 @@ class sms extends eqLogic {
 
 		$customNumber = $this->getCmd(null, 'send_to_custom_number');
 		if (!is_object($customNumber)) {
-			$customNumber = new smsCmd();
+			$customNumber = new sms4gCmd();
 			$customNumber->setEqLogic_id($this->getId());
 			$customNumber->setLogicalId('send_to_custom_number');
 			$customNumber->setIsVisible(0);
@@ -233,7 +406,7 @@ class sms extends eqLogic {
 	}
 }
 
-class smsCmd extends cmd {
+class sms4gCmd extends cmd {
 	/*     * *************************Attributs****************************** */
 
 	/*     * ***********************Méthode static*************************** */
@@ -275,12 +448,12 @@ class smsCmd extends cmd {
 		}
 		$eqLogic = $this->getEqLogic();
 		// send_to_custom_number n'a pas de destinataire fixe : la destination réelle est
-		// affichée dans la valeur des commandes (cf jeeSMS.php), pas dans leur nom
+		// affichée dans la valeur des commandes (cf jeesms4g.php), pas dans leur nom
 		$label = ($this->getLogicalId() == 'send_to_custom_number') ? 'Custom' : $this->getName();
 
 		$statusLogicalId = 'delivery_status_' . $this->getId();
 		if (!is_object($eqLogic->getCmd(null, $statusLogicalId))) {
-			$deliveryStatus = new smsCmd();
+			$deliveryStatus = new sms4gCmd();
 			$deliveryStatus->setEqLogic_id($this->getEqLogic_id());
 			$deliveryStatus->setLogicalId($statusLogicalId);
 			$deliveryStatus->setIsVisible(0);
@@ -296,7 +469,7 @@ class smsCmd extends cmd {
 
 		$successLogicalId = 'delivery_success_' . $this->getId();
 		if (!is_object($eqLogic->getCmd(null, $successLogicalId))) {
-			$deliverySuccess = new smsCmd();
+			$deliverySuccess = new sms4gCmd();
 			$deliverySuccess->setEqLogic_id($this->getEqLogic_id());
 			$deliverySuccess->setLogicalId($successLogicalId);
 			$deliverySuccess->setIsVisible(0);
@@ -354,16 +527,16 @@ class smsCmd extends cmd {
 		} else {
 			$message = trim($_options['title'] . ' ' . $_options['message']);
 		}
-		if (config::byKey('text_mode', 'sms') == 1) {
+		if (config::byKey('text_mode', 'sms4g') == 1) {
 			$message = self::cleanSMS(trim($message));
 		}
-		if (strlen($message) > config::byKey('maxChartByMessage', 'sms')) {
-			$messages = str_split($message, config::byKey('maxChartByMessage', 'sms'));
+		if (strlen($message) > config::byKey('maxChartByMessage', 'sms4g')) {
+			$messages = str_split($message, config::byKey('maxChartByMessage', 'sms4g'));
 			foreach ($messages as $message_split) {
-				$values[] = json_encode(array('apikey' => jeedom::getApiKey('sms'), 'number' => $number, 'message' => $message_split));
+				$values[] = json_encode(array('apikey' => jeedom::getApiKey('sms4g'), 'number' => $number, 'message' => $message_split));
 			}
 		} else {
-			$values[] = json_encode(array('apikey' => jeedom::getApiKey('sms'), 'number' => $number, 'message' => $message));
+			$values[] = json_encode(array('apikey' => jeedom::getApiKey('sms4g'), 'number' => $number, 'message' => $message));
 		}
 		if (!isset($_options['number'])) {
 			$phonenumbers = explode(';', $this->getConfiguration('phonenumber'));
@@ -373,7 +546,7 @@ class smsCmd extends cmd {
 					$value = json_decode($value, true);
 					foreach ($phonenumbers as $phonenumber) {
 						if (is_array($value)) {
-							$tmp_values[] = json_encode(array('apikey' => jeedom::getApiKey('sms'), 'number' => $phonenumber, 'message' => $value['message']));
+							$tmp_values[] = json_encode(array('apikey' => jeedom::getApiKey('sms4g'), 'number' => $phonenumber, 'message' => $value['message']));
 						}
 					}
 				}
@@ -382,7 +555,7 @@ class smsCmd extends cmd {
 		}
 		foreach ($values as $value) {
 			$socket = socket_create(AF_INET, SOCK_STREAM, 0);
-			socket_connect($socket, '127.0.0.1', config::byKey('socketport', 'sms'));
+			socket_connect($socket, '127.0.0.1', config::byKey('socketport', 'sms4g'));
 			socket_write($socket, $value, strlen($value));
 			socket_close($socket);
 		}

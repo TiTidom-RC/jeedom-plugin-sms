@@ -281,10 +281,10 @@ def shutdown():
 
 
 _log_level = "error"
-_socket_port = 55002
+_socket_port = 55114
 _socket_host = '127.0.0.1'
 _device = 'auto'
-_pidfile = '/tmp/smsd.pid'
+_pidfile = '/tmp/sms4gd.pid'
 _apikey = ''
 _callback = ''
 _cycle = 30
@@ -360,7 +360,7 @@ _cycle = float(_cycle)
 
 jeedom_utils.set_log_level(_log_level)
 
-logging.info('Start smsd')
+logging.info('Start sms4gd')
 logging.info('Log level : %s', _log_level)
 logging.info('Socket port : %s', _socket_port)
 logging.info('Socket host : %s', _socket_host)

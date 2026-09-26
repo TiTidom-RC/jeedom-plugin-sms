@@ -18,18 +18,125 @@
 
 require_once dirname(__FILE__) . '/../../../core/php/core.inc.php';
 
-function sms_install() {
+function sms4g_install() {
+	$pluginVersion = sms4g::getPluginVersion();
+	config::save('pluginVersion', $pluginVersion, 'sms4g');
+	message::removeAll('sms4g');
+	message::add('sms4g', 'Installation du plugin SMS 4G (Version : ' . $pluginVersion . ')', null, null);
+
+	sms4g::getPythonDepFromRequirements();
+
 	if (config::byKey('api::sms::mode') == '') {
 		config::save('api::sms::mode', 'localhost');
+	}
+	if (config::byKey('pythonVersion', 'sms4g') == '') {
+		config::save('pythonVersion', '?.?.?', 'sms4g');
+	}
+	if (config::byKey('pyenvVersion', 'sms4g') == '') {
+		config::save('pyenvVersion', '?.?.?', 'sms4g');
+	}
+	if (config::byKey('port', 'sms4g') == '') {
+		config::save('port', 'auto', 'sms4g');
+	}
+	if (config::byKey('socketport', 'sms4g') == '') {
+		config::save('socketport', '55114', 'sms4g');
+	}
+	if (config::byKey('serial_rate', 'sms4g') == '') {
+		config::save('serial_rate', '115200', 'sms4g');
+	}
+	if (config::byKey('cycle', 'sms4g') == '') {
+		config::save('cycle', '30', 'sms4g');
+	}
+	if (config::byKey('maxChartByMessage', 'sms4g') == '') {
+		config::save('maxChartByMessage', '140', 'sms4g');
+	}
+	if (config::byKey('debugInstallUpdates', 'sms4g') == '') {
+		config::save('debugInstallUpdates', '0', 'sms4g');
+	}
+	if (config::byKey('debugRestorePyEnv', 'sms4g') == '') {
+		config::save('debugRestorePyEnv', '0', 'sms4g');
+	}
+	if (config::byKey('debugRestoreVenv', 'sms4g') == '') {
+		config::save('debugRestoreVenv', '0', 'sms4g');
+	}
+	if (config::byKey('disableUpdateMsg', 'sms4g') == '') {
+		config::save('disableUpdateMsg', '0', 'sms4g');
+	}
+
+	$dependencyInfo = sms4g::dependancy_info();
+	if (!isset($dependencyInfo['state'])) {
+		message::add('sms4g', __('Veuillez vérifier les dépendances', __FILE__));
+	} elseif ($dependencyInfo['state'] === 'nok') {
+		try {
+			$plugin = plugin::byId('sms4g');
+			$plugin->dependancy_install();
+		} catch (\Throwable $th) {
+			message::add('sms4g', __('Une erreur est survenue à l\'installation automatique des dépendances. Vérifiez les logs et relancez les dépendances manuellement', __FILE__));
+		}
 	}
 }
 
-function sms_update() {
+function sms4g_update() {
+	$pluginVersion = sms4g::getPluginVersion();
+	config::save('pluginVersion', $pluginVersion, 'sms4g');
+	if (config::byKey('disableUpdateMsg', 'sms4g', '0') === '0') {
+		message::removeAll('sms4g');
+		message::add('sms4g', 'Mise à jour du plugin SMS 4G (Version : ' . $pluginVersion . ')', null, null);
+	}
+
+	sms4g::getPythonDepFromRequirements();
+
 	if (config::byKey('api::sms::mode') == '') {
 		config::save('api::sms::mode', 'localhost');
 	}
+	if (config::byKey('pythonVersion', 'sms4g') == '') {
+		config::save('pythonVersion', '?.?.?', 'sms4g');
+	}
+	if (config::byKey('pyenvVersion', 'sms4g') == '') {
+		config::save('pyenvVersion', '?.?.?', 'sms4g');
+	}
+	if (config::byKey('port', 'sms4g') == '') {
+		config::save('port', 'auto', 'sms4g');
+	}
+	if (config::byKey('socketport', 'sms4g') == '') {
+		config::save('socketport', '55114', 'sms4g');
+	}
+	if (config::byKey('serial_rate', 'sms4g') == '') {
+		config::save('serial_rate', '115200', 'sms4g');
+	}
+	if (config::byKey('cycle', 'sms4g') == '') {
+		config::save('cycle', '30', 'sms4g');
+	}
+	if (config::byKey('maxChartByMessage', 'sms4g') == '') {
+		config::save('maxChartByMessage', '140', 'sms4g');
+	}
+	if (config::byKey('debugInstallUpdates', 'sms4g') == '') {
+		config::save('debugInstallUpdates', '0', 'sms4g');
+	}
+	if (config::byKey('debugRestorePyEnv', 'sms4g') == '') {
+		config::save('debugRestorePyEnv', '0', 'sms4g');
+	}
+	if (config::byKey('debugRestoreVenv', 'sms4g') == '') {
+		config::save('debugRestoreVenv', '0', 'sms4g');
+	}
+	if (config::byKey('disableUpdateMsg', 'sms4g') == '') {
+		config::save('disableUpdateMsg', '0', 'sms4g');
+	}
+
+	$dependencyInfo = sms4g::dependancy_info();
+	if (!isset($dependencyInfo['state'])) {
+		message::add('sms4g', __('Veuillez vérifier les dépendances', __FILE__));
+	} elseif ($dependencyInfo['state'] === 'nok') {
+		try {
+			$plugin = plugin::byId('sms4g');
+			$plugin->dependancy_install();
+		} catch (\Throwable $th) {
+			message::add('sms4g', __('Une erreur est survenue à la mise à jour automatique des dépendances. Vérifiez les logs et relancez les dépendances manuellement', __FILE__));
+		}
+	}
+
 	// Crée les commandes manquantes sur les équipements/contacts créés avant l'ajout de ces fonctionnalités
-	foreach (eqLogic::byType('sms') as $eqLogic) {
+	foreach (eqLogic::byType('sms4g') as $eqLogic) {
 		foreach ($eqLogic->getCmd('action') as $cmd) {
 			if ($cmd->getSubType() == 'message' && (!is_object($eqLogic->getCmd(null, 'delivery_status_' . $cmd->getId())) || !is_object($eqLogic->getCmd(null, 'delivery_success_' . $cmd->getId())))) {
 				$cmd->save();
@@ -40,7 +147,7 @@ function sms_update() {
 		}
 	}
 	$paths = array(
-		'resources/smsd/gsmmodem/compat.py',
+		'resources/sms4gd/gsmmodem/compat.py',
 	);
 	foreach ($paths as $path) {
 		$file = dirname(__FILE__) . '/../' . $path;
@@ -48,18 +155,18 @@ function sms_update() {
 			if (is_dir($file)) {
 				exec('rm -rf ' . escapeshellarg($file), $output, $return_var);
 				if ($return_var != 0) {
-					log::add('sms', 'error', 'Failed to remove ' . $file . ' (return code: ' . $return_var . ')');
+					log::add('sms4g', 'error', 'Failed to remove ' . $file . ' (return code: ' . $return_var . ')');
 				}
 			} else {
 				if (!unlink($file)) {
-					log::add('sms', 'error', 'Failed to remove ' . $file);
+					log::add('sms4g', 'error', 'Failed to remove ' . $file);
 				}
 			}
 		}
 	}
 }
 
-function sms_remove() {
+function sms4g_remove() {
 
 }
 
