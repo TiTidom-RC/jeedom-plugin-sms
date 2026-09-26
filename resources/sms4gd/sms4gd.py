@@ -288,7 +288,7 @@ def shutdown():
 
 
 _log_level = "error"
-_socket_port = 55114
+_socket_port = 55115
 _socket_host = '127.0.0.1'
 _device = None
 _pidfile = '/tmp/sms4gd.pid'

@@ -39,7 +39,7 @@ function sms4g_install() {
 		config::save('port', 'none', 'sms4g');
 	}
 	if (config::byKey('socketport', 'sms4g') == '') {
-		config::save('socketport', '55114', 'sms4g');
+		config::save('socketport', '55115', 'sms4g');
 	}
 	if (config::byKey('serialRate', 'sms4g') == '') {
 		config::save('serialRate', '115200', 'sms4g');
@@ -111,7 +111,7 @@ function sms4g_update() {
 		config::save('port', 'none', 'sms4g');
 	}
 	if (config::byKey('socketport', 'sms4g') == '') {
-		config::save('socketport', '55114', 'sms4g');
+		config::save('socketport', '55115', 'sms4g');
 	}
 	if (config::byKey('serialRate', 'sms4g') == '') {
 		config::save('serialRate', '115200', 'sms4g');

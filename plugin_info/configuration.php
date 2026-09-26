@@ -89,10 +89,10 @@ if (!isConnect('admin')) {
             <div class="form-group">
                 <label class="col-lg-3 control-label">{{Port socket interne}}
                     <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
-                    <sup><i class="fas fa-question-circle tooltips" title="{{[ATTENTION] Ne changez ce paramètre qu'en cas de nécessité. (Défaut = 55114)}}"></i></sup>
+                    <sup><i class="fas fa-question-circle tooltips" title="{{[ATTENTION] Ne changez ce paramètre qu'en cas de nécessité. (Défaut = 55115)}}"></i></sup>
                 </label>
                 <div class="col-lg-1">
-                    <input class="configKey form-control" data-l1key="socketport" placeholder="55114" />
+                    <input class="configKey form-control" data-l1key="socketport" placeholder="55115" />
                 </div>
             </div>
             <div class="form-group">
