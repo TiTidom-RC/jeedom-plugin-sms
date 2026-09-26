@@ -23,6 +23,7 @@ import traceback
 import json
 from itertools import count
 from typing import Optional
+from queue import Empty
 from gsmmodem.exceptions import TimeoutException
 from gsmmodem.modem import GsmModem, StatusReport
 
@@ -229,7 +230,13 @@ def listen():
                 read_socket()
             except Exception as e:
                 logging.error("Exception on socket : %s", e)
-            time.sleep(sleep_duration)
+            # Attente interruptible : un SMS sortant remis dans la queue reveille la boucle immédiatement
+            # au lieu d'attendre la fin du cycle (read_socket() le traitera au prochain tour)
+            try:
+                pending_message = JEEDOM_SOCKET_MESSAGE.get(timeout=sleep_duration)
+                JEEDOM_SOCKET_MESSAGE.put(pending_message)
+            except Empty:
+                pass
     except KeyboardInterrupt:
         shutdown()
 

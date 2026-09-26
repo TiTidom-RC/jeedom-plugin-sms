@@ -211,13 +211,13 @@ class sms4g extends eqLogic {
 		$port = config::byKey('port', 'sms4g');
 		if ($port == 'none' || $port == '') {
 			$return['launchable'] = 'nok';
-			$return['launchable_message'] = __('Veuillez sélectionner un port', __FILE__);
+			$return['launchable_message'] = __("Le port n'est pas configuré", __FILE__);
 		} else {
 			$port = jeedom::getUsbMapping($port);
 			if (is_string($port)) {
 				if (@!file_exists($port)) {
 					$return['launchable'] = 'nok';
-					$return['launchable_message'] = __('Le port n\'est pas configuré', __FILE__);
+					$return['launchable_message'] = __("Le port n'est pas configuré", __FILE__);
 				}
 				exec(system::getCmdSudo() . 'chmod 777 ' . $port . ' > /dev/null 2>&1');
 			}
