@@ -26,81 +26,81 @@ if (!isConnect('admin')) {
         <div>
             <legend><i class="fas fa-info"></i> {{Plugin}}</legend>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Version Plugin}}
+                <label class="col-lg-3 control-label">{{Version Plugin}}
                     <sup><i class="fas fa-question-circle tooltips" title="{{Version du Plugin (A indiquer sur Community)}}"></i></sup>
                 </label>
-                <div class="col-sm-5">
+                <div class="col-lg-1">
                     <input class="configKey form-control" data-l1key="pluginVersion" readonly />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Version Python}}
+                <label class="col-lg-3 control-label">{{Version Python}}
                     <sup><i class="fas fa-question-circle tooltips" title="{{Version de Python utilisée par le Plugin (A indiquer sur Community)}}"></i></sup>
                 </label>
-                <div class="col-sm-5">
+                <div class="col-lg-1">
                     <input class="configKey form-control" data-l1key="pythonVersion" readonly />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Version PyEnv}}
+                <label class="col-lg-3 control-label">{{Version PyEnv}}
                     <sup><i class="fas fa-question-circle tooltips" title="{{Version de PyEnv utilisée par le Plugin (A indiquer sur Community)}}"></i></sup>
                 </label>
-                <div class="col-sm-5">
+                <div class="col-lg-1">
                     <input class="configKey form-control" data-l1key="pyenvVersion" readonly />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Désactiver les messages de MàJ}}
+                <label class="col-lg-3 control-label">{{Désactiver les messages de MàJ}}
                     <sup><i class="fas fa-question-circle tooltips" title="{{Cocher cette case désactivera les messages de mise à jour du plugin dans le centre de message}}"></i></sup>
                 </label>
-                <div class="col-sm-5">
+                <div class="col-lg-1">
                     <input type="checkbox" class="configKey" data-l1key="disableUpdateMsg" />
                 </div>
             </div>
             <legend><i class="fas fa-code"></i> {{Dépendances}}</legend>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Force les mises à jour Systèmes}}
+                <label class="col-lg-3 control-label">{{Force les mises à jour Systèmes}}
                     <sup><i class="fas fa-ban tooltips" style="color:var(--al-danger-color)!important;" title="{{Les dépendances devront être relancées après la sauvegarde de ce paramètre}}"></i></sup>
                     <sup><i class="fas fa-question-circle tooltips" title="{{Permet de forcer l'installation des mises à jour systèmes}}"></i></sup>
                 </label>
-                <div class="col-sm-5">
+                <div class="col-lg-1">
                     <input type="checkbox" class="configKey" data-l1key="debugInstallUpdates" />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Force la réinitialisation de PyEnv}}
+                <label class="col-lg-3 control-label">{{Force la réinitialisation de PyEnv}}
                     <sup><i class="fas fa-ban tooltips" style="color:var(--al-danger-color)!important;" title="{{Les dépendances devront être relancées après la sauvegarde de ce paramètre}}"></i></sup>
                     <sup><i class="fas fa-question-circle tooltips" title="{{Permet de forcer la réinitialisation de l'environnement Python utilisé par le plugin}}"></i></sup>
                 </label>
-                <div class="col-sm-5">
+                <div class="col-lg-1">
                     <input type="checkbox" class="configKey" data-l1key="debugRestorePyEnv" />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Force la réinitialisation de Venv}}
+                <label class="col-lg-3 control-label">{{Force la réinitialisation de Venv}}
                     <sup><i class="fas fa-ban tooltips" style="color:var(--al-danger-color)!important;" title="{{Les dépendances devront être relancées après la sauvegarde de ce paramètre}}"></i></sup>
                     <sup><i class="fas fa-question-circle tooltips" title="{{Permet de forcer la réinitialisation de l'environnement Venv utilisé par le plugin}}"></i></sup>
                 </label>
-                <div class="col-sm-5">
+                <div class="col-lg-1">
                     <input type="checkbox" class="configKey" data-l1key="debugRestoreVenv" />
                 </div>
             </div>
             <legend><i class="fas fa-university"></i> {{Démon}}</legend>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Port socket interne}}
+                <label class="col-lg-3 control-label">{{Port socket interne}}
                     <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
                     <sup><i class="fas fa-question-circle tooltips" title="{{[ATTENTION] Ne changez ce paramètre qu'en cas de nécessité. (Défaut = 55114)}}"></i></sup>
                 </label>
-                <div class="col-sm-5">
+                <div class="col-lg-1">
                     <input class="configKey form-control" data-l1key="socketport" placeholder="55114" />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Cycle (s)}}
+                <label class="col-lg-3 control-label">{{Cycle (s)}}
                     <sup><i class="fas fa-exclamation-triangle tooltips" style="color:var(--al-warning-color)!important;" title="{{Le démon devra être redémarré après la modification de ce paramètre}}"></i></sup>
                     <sup><i class="fas fa-question-circle tooltips" title="{{Cycle de scrutation du démon pour l'envoi et la réception des SMS. Un chiffre trop bas peut amener à une certaine instabilité.}}"></i></sup>
                 </label>
-                <div class="col-sm-5">
+                <div class="col-lg-1">
                     <input class="configKey form-control" data-l1key="cycle" />
                 </div>
             </div>
@@ -108,8 +108,8 @@ if (!isConnect('admin')) {
         <div>
             <legend><i class="fas fa-sim-card"></i> {{Modem}}</legend>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Port SMS}}</label>
-                <div class="col-sm-5">
+                <label class="col-lg-3 control-label">{{Port SMS}}</label>
+                <div class="col-lg-3">
                     <select class="configKey form-control" data-l1key="port">
                         <option value="auto">{{Auto}}</option>
                         <?php
@@ -124,8 +124,8 @@ if (!isConnect('admin')) {
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Vitesse de communication (bauds)}}</label>
-                <div class="col-sm-5">
+                <label class="col-lg-3 control-label">{{Vitesse de communication (bauds)}}</label>
+                <div class="col-lg-2">
                     <select class="configKey form-control" data-l1key="serialRate">
                         <option value="115200">115200</option>
                         <option value="9600">9600</option>
@@ -133,32 +133,32 @@ if (!isConnect('admin')) {
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Code pin (laisser vide s'il n'y en a pas)}}</label>
-                <div class="col-sm-5">
+                <label class="col-lg-3 control-label">{{Code pin (laisser vide s'il n'y en a pas)}}</label>
+                <div class="col-lg-2">
                     <input type="password" class="configKey form-control" data-l1key="pin" />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Texte mode}}</label>
-                <div class="col-sm-5">
+                <label class="col-lg-3 control-label">{{Texte mode}}</label>
+                <div class="col-lg-1">
                     <input type="checkbox" class="configKey" data-l1key="textMode" title='{{A utiliser si vous ne recevez pas de message (compatibilité avec un maximum de modem) mais enleve le support des SMS multiple et des caractères spéciaux}}' />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Forcer le mode 4G uniquement}}</label>
-                <div class="col-sm-5">
+                <label class="col-lg-3 control-label">{{Forcer le mode 4G uniquement}}</label>
+                <div class="col-lg-1">
                     <input type="checkbox" class="configKey" data-l1key="force4gOnly" title='{{Recommandé si votre opérateur a coupé la 2G/3G : évite au modem de perdre du temps à les rechercher. Attention, si la couverture 4G est absente à un endroit, le modem ne se repliera pas sur 2G/3G. Uniquement pris en compte sur les modems SimCom (ex : SIM7600G-H)}}' />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Force du signal}}</label>
-                <div class="col-sm-5" title='{{-1 = signal inconnu (pas de lecture disponible actuellement)}}'>
+                <label class="col-lg-3 control-label">{{Force du signal}}</label>
+                <div class="col-lg-2" title='{{-1 = signal inconnu (pas de lecture disponible actuellement)}}'>
                     <span class="configKey" data-l1key="signalStrength"></span> / 30
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Réseau}}</label>
-                <div class="col-sm-5">
+                <label class="col-lg-3 control-label">{{Réseau}}</label>
+                <div class="col-lg-3">
                     <span class="configKey" data-l1key="networkName"></span>
                 </div>
             </div>
@@ -166,47 +166,47 @@ if (!isConnect('admin')) {
         <div>
             <legend><i class="fas fa-sms"></i> {{Messages}}</legend>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Découper les messages par paquet de caractères}}</label>
-                <div class="col-sm-5">
+                <label class="col-lg-3 control-label">{{Découper les messages par paquet de caractères}}</label>
+                <div class="col-lg-1">
                     <input class="configKey form-control" data-l1key="maxChartByMessage" title='{{Par defaut 140}}' />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Passerelle SMS / SMS Gateway (en cas d'erreur : CMS 330 SMSC number not set)}}</label>
-                <div class="col-sm-5">
+                <label class="col-lg-3 control-label">{{Passerelle SMS / SMS Gateway (en cas d'erreur : CMS 330 SMSC number not set)}}</label>
+                <div class="col-lg-2">
                     <input class="configKey form-control" data-l1key="smsc" title='{{Utiliser le code #*#*4636#*#* sur un mobile pour trouver le SMSC de votre opérateur}}' />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Demander un accusé de réception}}</label>
-                <div class="col-sm-5">
+                <label class="col-lg-3 control-label">{{Demander un accusé de réception}}</label>
+                <div class="col-lg-1">
                     <input type="checkbox" class="configKey" data-l1key="deliveryReport" title='{{Le démon tentera de récupérer le statut de livraison (livré / échec) de chaque message envoyé}}' />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Délai d'expiration des fragments SMS incomplets (s)}}</label>
-                <div class="col-sm-5">
+                <label class="col-lg-3 control-label">{{Délai d'expiration des fragments SMS incomplets (s)}}</label>
+                <div class="col-lg-1">
                     <input class="configKey form-control" data-l1key="concatPartsTtl" title="{{Si un SMS multi-parties (message long) n'est jamais reçu en entier, les fragments déjà reçus sont délivrés tels quels après ce délai, avec un marqueur aux emplacements manquants}}" />
                 </div>
             </div>
         </div>
         <div>
-            <legend><i class="fas fa-sync-alt"></i> {{Reconnexion automatique en cas de perte du modem}}</legend>
+            <legend><i class="fas fa-sync-alt"></i> {{Reconnexion automatique}}</legend>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Délai avant la première tentative (s)}}</label>
-                <div class="col-sm-5">
+                <label class="col-lg-3 control-label">{{Délai avant la première tentative (s)}}</label>
+                <div class="col-lg-1">
                     <input class="configKey form-control" data-l1key="reconnectBaseDelay" title="{{Ce délai double à chaque nouvel échec, jusqu'au délai maximum ci-dessous}}" />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Délai maximum entre deux tentatives (s)}}</label>
-                <div class="col-sm-5">
+                <label class="col-lg-3 control-label">{{Délai maximum entre deux tentatives (s)}}</label>
+                <div class="col-lg-1">
                     <input class="configKey form-control" data-l1key="reconnectMaxDelay" />
                 </div>
             </div>
             <div class="form-group">
-                <label class="col-sm-5 control-label">{{Nombre maximum de tentatives avant redémarrage complet du démon}}</label>
-                <div class="col-sm-5">
+                <label class="col-lg-3 control-label">{{Nombre maximum de tentatives avant redémarrage complet du démon}}</label>
+                <div class="col-lg-1">
                     <input class="configKey form-control" data-l1key="reconnectMaxAttempts" />
                 </div>
             </div>
