@@ -87,3 +87,14 @@ $('.eqLogicAttr[data-l2key="allowUnknownOrigin"]').on('change', function () {
 $('.eqLogicAttr[data-l2key="autoAddNewNumber"]').on('change', function () {
   $('#autoAddNewNumberWarning').toggle(this.checked);
 }).change();
+
+// Ouverture des liens Documentation/Communauté (boutons du bloc "Gestion")
+document.body.addEventListener('click', function (event) {
+  var locationTarget = event.target.closest('.pluginAction[data-action=openLocation]');
+  if (locationTarget) {
+    var location = locationTarget.getAttribute('data-location');
+    if (location) {
+      window.open(location, '_blank', null);
+    }
+  }
+});
