@@ -21,6 +21,16 @@ $eqLogics = eqLogic::byType($plugin->getId());
 				<br />
 				<span>{{Configuration}}</span>
 			</div>
+			<div class="cursor pluginAction logoSecondary" data-action="openLocation" data-location="<?= $plugin->getDocumentation() ?>">
+				<i class="fas fa-book icon_blue"></i>
+				<br />
+				<span>{{Documentation}}</span>
+			</div>
+			<div class="cursor pluginAction logoPrimary" data-action="openLocation" data-location="https://community.jeedom.com/tag/plugin-<?= $plugin->getId() ?>">
+				<i class="fas fa-thumbs-up"></i>
+				<br />
+				<span>{{Communauté}}</span>
+			</div>
 		</div>
 		<legend><i class="fas fa-sms"></i> {{Mes SMS}}</legend>
 		<?php
