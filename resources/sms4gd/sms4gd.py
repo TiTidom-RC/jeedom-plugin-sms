@@ -283,7 +283,7 @@ def shutdown():
 _log_level = "error"
 _socket_port = 55114
 _socket_host = '127.0.0.1'
-_device = 'auto'
+_device = None
 _pidfile = '/tmp/sms4gd.pid'
 _apikey = ''
 _callback = ''
@@ -378,18 +378,6 @@ logging.info('Reconnect base delay : %s', _reconnect_base_delay)
 logging.info('Reconnect max delay : %s', _reconnect_max_delay)
 logging.info('Reconnect max attempts : %s', _reconnect_max_attempts)
 logging.info('Concat parts TTL : %s', _concat_parts_ttl)
-
-
-if _device == 'auto':
-    know_sticks = [{'idVendor': '12d1', 'idProduct': '1003', 'name': 'Huawei'},
-                   {'idVendor': '12d1', 'idProduct': '1f01', 'name': 'Huawei'},
-                   {'idVendor': '12d1', 'idProduct': '1001', 'name': 'Huawei'},
-                   {'idVendor': '0403', 'idProduct': '6001', 'name': 'Gsm'}]
-    for stick in know_sticks:
-        _device = jeedom_utils.find_tty_usb(stick['idVendor'], stick['idProduct'], stick['name'])
-        if _device is not None:
-            logging.info('Find device : %s', _device)
-            break
 
 
 if _device is None:

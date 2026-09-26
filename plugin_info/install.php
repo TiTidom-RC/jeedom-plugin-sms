@@ -36,7 +36,7 @@ function sms4g_install() {
 		config::save('pyenvVersion', '?.?.?', 'sms4g');
 	}
 	if (config::byKey('port', 'sms4g') == '') {
-		config::save('port', 'auto', 'sms4g');
+		config::save('port', 'none', 'sms4g');
 	}
 	if (config::byKey('socketport', 'sms4g') == '') {
 		config::save('socketport', '55114', 'sms4g');
@@ -108,7 +108,7 @@ function sms4g_update() {
 		config::save('pyenvVersion', '?.?.?', 'sms4g');
 	}
 	if (config::byKey('port', 'sms4g') == '') {
-		config::save('port', 'auto', 'sms4g');
+		config::save('port', 'none', 'sms4g');
 	}
 	if (config::byKey('socketport', 'sms4g') == '') {
 		config::save('socketport', '55114', 'sms4g');

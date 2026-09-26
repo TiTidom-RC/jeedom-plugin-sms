@@ -209,7 +209,10 @@ class sms4g extends eqLogic {
 		}
 		$return['launchable'] = 'ok';
 		$port = config::byKey('port', 'sms4g');
-		if ($port != 'auto') {
+		if ($port == 'none' || $port == '') {
+			$return['launchable'] = 'nok';
+			$return['launchable_message'] = __('Veuillez sélectionner un port', __FILE__);
+		} else {
 			$port = jeedom::getUsbMapping($port);
 			if (is_string($port)) {
 				if (@!file_exists($port)) {
@@ -230,9 +233,7 @@ class sms4g extends eqLogic {
 			throw new Exception(__('Veuillez vérifier la configuration', __FILE__));
 		}
 		$port = config::byKey('port', 'sms4g');
-		if ($port != 'auto') {
-			$port = jeedom::getUsbMapping($port);
-		}
+		$port = jeedom::getUsbMapping($port);
 		$sms_path = realpath(__DIR__ . '/../../resources/sms4gd');
 		$cmd = self::PYTHON3_PATH . " {$sms_path}/sms4gd.py";
 		$cmd .= ' --device ' . $port;
@@ -286,7 +287,7 @@ class sms4g extends eqLogic {
 		system::kill('sms4gd.py'); // SIGKILL de sécurité si zombie
 		system::fuserk(config::byKey('socketport', 'sms4g'));
 		$port = config::byKey('port', 'sms4g');
-		if ($port != 'auto') {
+		if ($port != 'none' && $port != '') {
 			system::fuserk(jeedom::getUsbMapping($port));
 		}
 	}

@@ -114,7 +114,7 @@ if (!isConnect('admin')) {
                 </label>
                 <div class="col-lg-3">
                     <select class="configKey form-control" data-l1key="port">
-                        <option value="auto">{{Auto}}</option>
+                        <option value="none">{{Aucun}}</option>
                         <?php
                         foreach (jeedom::getUsbMapping() as $name => $value) {
                             echo '<option value="' . $name . '">' . $name . ' (' . $value . ')</option>';
